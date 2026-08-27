@@ -5,7 +5,7 @@ import TaskForm from '../components/TaskForm'
 import TaskItem from '../components/TaskItem'
 
 function Dashboard() {
-  const { tasks, statistics, addTask, updateTask, toggleTask, deleteTask } = useTasks()
+  const { tasks, statistics, isLoading, error, addTask, updateTask, toggleTask, deleteTask } = useTasks()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
@@ -62,10 +62,18 @@ function Dashboard() {
             </div>
           </div>
 
+          {error && <div className='mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300'>{error}</div>}
+
           <div className='mt-6 space-y-3'>
-            {filteredTasks.length > 0 ? (
+            {isLoading ? (
+              <>
+                <TaskSkeleton />
+                <TaskSkeleton />
+                <TaskSkeleton />
+              </>
+            ) : filteredTasks.length > 0 ? (
               filteredTasks.map(task => (
-                <TaskItem key={task.id} task={task} onToggle={toggleTask} onUpdate={updateTask} onDelete={deleteTask} />
+                <TaskItem key={task._id} task={task} onToggle={toggleTask} onUpdate={updateTask} onDelete={deleteTask} />
               ))
             ) : (
               <div className='rounded-xl border border-dashed border-slate-800 p-8 text-center'>
@@ -88,6 +96,14 @@ function StatCard({ label, value, icon: Icon }) {
         <Icon size={18} className='text-cyan-400' />
       </div>
       <p className='mt-3 text-3xl font-bold'>{value}</p>
+    </div>
+  )
+}
+
+function TaskSkeleton() {
+  return (
+    <div className='animate-pulse rounded-xl border border-slate-800 bg-slate-950 p-4'>
+      <div className='h-4 w-3/4 rounded bg-slate-800' />
     </div>
   )
 }

@@ -1,34 +1,119 @@
-import { useCallback, useMemo, useState } from 'react'
-
-const initialTasks = [
-  { id: 1, title: 'Design the dashboard', completed: true },
-  { id: 2, title: 'Create task API', completed: false },
-  { id: 3, title: 'Build task filtering', completed: false }
-]
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import api from '../lib/api'
 
 function useTasks() {
-  const [tasks, setTasks] = useState(initialTasks)
+  const [tasks, setTasks] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const addTask = useCallback(title => {
-    const newTask = { id: Date.now(), title, completed: false }
+  const fetchTasks = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError('')
 
-    setTasks((currentTasks) => [newTask, ...currentTasks])
+      const { data } = await api.get('/tasks')
+
+      setTasks(data)
+    } catch (error) {
+      console.error(error)
+
+      setError(error.response?.data?.message || 'Unable to load tasks.')
+    } finally {
+      setIsLoading(false)
+    }
   }, [])
 
-  const updateTask = useCallback((id, title) => {
+  useEffect(() => {
+    fetchTasks()
+  }, [fetchTasks])
+
+  const addTask = useCallback(async (title) => {
     const trimmedTitle = title.trim()
 
-    if (!trimmedTitle) return
+    if (!trimmedTitle) {
+      return false
+    }
 
-    setTasks(currentTasks => currentTasks.map(task => task.id === id ? { ...task, title: trimmedTitle } : task))
+    try {
+      setError('')
+
+      const { data } = await api.post('/tasks', { title: trimmedTitle })
+
+      setTasks(currentTasks => [data, ...currentTasks])
+
+      return true
+    } catch (error) {
+      console.error(error)
+
+      setError(error.response?.data?.message || 'Unable to create task.')
+      return false
+    }
   }, [])
 
-  const toggleTask = useCallback(id => {
-    setTasks(currentTasks => currentTasks.map(task => task.id === id ? { ...task, completed: !task.completed } : task))
+  const updateTask = useCallback(async (id, title) => {
+    const trimmedTitle = title.trim()
+
+    if (!trimmedTitle) {
+      return false
+    }
+
+    try {
+      setError('')
+
+      const { data } = await api.patch(`/tasks/${id}`, { title: trimmedTitle })
+
+      setTasks(currentTasks => currentTasks.map(task => task._id === id ? data : task))
+
+      return true
+    } catch (error) {
+      console.error(error)
+
+      setError(error.response?.data?.message || 'Unable to update task.')
+
+      return false
+    }
   }, [])
 
-  const deleteTask = useCallback(id => {
-    setTasks(currentTasks => currentTasks.filter(task => task.id !== id))
+  const toggleTask = useCallback(async (id) => {
+    const currentTask = tasks.find(task => task._id === id)
+
+    if (!currentTask) {
+      return false
+    }
+
+    try {
+      setError('')
+
+      const { data } = await api.patch(`/tasks/${id}`, { completed: !currentTask.completed })
+
+      setTasks(currentTasks => currentTasks.map(task => task._id === id ? data : task))
+
+      return true
+    } catch (error) {
+      console.error(error)
+
+      setError(error.response?.data?.message || 'Unable to update task.')
+
+      return false
+    }
+  }, [tasks])
+
+  const deleteTask = useCallback(async (id) => {
+    try {
+      setError('')
+
+      await api.delete(`/tasks/${id}`)
+
+      setTasks(currentTasks => currentTasks.filter(task => task._id !== id))
+
+      return true
+    } catch (error) {
+      console.error(error)
+
+      setError(error.response?.data?.message || 'Unable to delete task.')
+
+      return false
+    }
   }, [])
 
   const statistics = useMemo(() => {
@@ -41,7 +126,7 @@ function useTasks() {
     }
   }, [tasks])
 
-  return { tasks, statistics, addTask, updateTask, toggleTask, deleteTask }
+  return { tasks, statistics, isLoading, error, addTask, updateTask, toggleTask, deleteTask, refetch: fetchTasks }
 }
 
 export default useTasks

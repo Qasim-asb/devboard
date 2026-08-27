@@ -20,7 +20,7 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
 
     if (!trimmedTitle) return
 
-    onUpdate(task.id, trimmedTitle)
+    onUpdate(task._id, trimmedTitle)
     setIsEditing(false)
   }
 
@@ -56,7 +56,7 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
 
   return (
     <div className='flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4'>
-      <button type='button' onClick={() => onToggle(task.id)} className='shrink-0 text-slate-500 transition hover:text-cyan-400'>
+      <button type='button' onClick={() => onToggle(task._id)} className='shrink-0 text-slate-500 transition hover:text-cyan-400'>
         {task.completed ? <CheckCircle2 size={20} className='text-cyan-400' /> : <Circle size={20} />}
       </button>
 
@@ -69,7 +69,7 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
           <Pencil size={17} />
         </button>
 
-        <button type='button' onClick={() => onDelete(task.id)} className='rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-400'>
+        <button type='button' onClick={() => onDelete(task._id)} className='rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-400'>
           <Trash2 size={17} />
         </button>
       </div>
