@@ -5,7 +5,7 @@ import TaskForm from '../components/TaskForm'
 import TaskItem from '../components/TaskItem'
 
 function Dashboard() {
-  const { tasks, statistics, addTask, toggleTask, deleteTask } = useTasks()
+  const { tasks, statistics, addTask, updateTask, toggleTask, deleteTask } = useTasks()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
@@ -65,7 +65,7 @@ function Dashboard() {
           <div className='mt-6 space-y-3'>
             {filteredTasks.length > 0 ? (
               filteredTasks.map(task => (
-                <TaskItem key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+                <TaskItem key={task.id} task={task} onToggle={toggleTask} onUpdate={updateTask} onDelete={deleteTask} />
               ))
             ) : (
               <div className='rounded-xl border border-dashed border-slate-800 p-8 text-center'>

@@ -15,6 +15,14 @@ function useTasks() {
     setTasks((currentTasks) => [newTask, ...currentTasks])
   }, [])
 
+  const updateTask = useCallback((id, title) => {
+    const trimmedTitle = title.trim()
+
+    if (!trimmedTitle) return
+
+    setTasks(currentTasks => currentTasks.map(task => task.id === id ? { ...task, title: trimmedTitle } : task))
+  }, [])
+
   const toggleTask = useCallback(id => {
     setTasks(currentTasks => currentTasks.map(task => task.id === id ? { ...task, completed: !task.completed } : task))
   }, [])
@@ -33,7 +41,7 @@ function useTasks() {
     }
   }, [tasks])
 
-  return { tasks, statistics, addTask, toggleTask, deleteTask }
+  return { tasks, statistics, addTask, updateTask, toggleTask, deleteTask }
 }
 
 export default useTasks
