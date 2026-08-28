@@ -1,12 +1,21 @@
 import { useState } from 'react'
-import { LayoutDashboard, Menu, Plus, X } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { LayoutDashboard, LogOut, Menu, Plus, X } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const navigate = useNavigate()
+  const { user, isAuthenticated, logout } = useAuth()
 
   function closeMenu() {
     setIsOpen(false)
+  }
+
+  function handleLogout() {
+    logout()
+    closeMenu()
+    navigate('/login')
   }
 
   return (
@@ -19,14 +28,36 @@ function Navbar() {
           </Link>
 
           <nav className='hidden items-center gap-2 md:flex'>
-            <Link to='/' className='inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
-              <LayoutDashboard size={16} />
-              Dashboard
-            </Link>
-            <button type='button' className='inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
-              <Plus size={16} />
-              New task
-            </button>
+            {isAuthenticated ? (
+              <>
+                <Link to='/' className='inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
+                  <LayoutDashboard size={16} />
+                  Dashboard
+                </Link>
+
+                <button type='button' className='inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
+                  <Plus size={16} />
+                  New task
+                </button>
+
+                <div className='ml-2 flex items-center gap-3 border-l border-slate-800 pl-3'>
+                  <span className='max-w-32 truncate text-sm text-slate-400'>{user?.name}</span>
+                  <button type='button' onClick={handleLogout} className='inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link to='/login' className='rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
+                  Login
+                </Link>
+                <Link to='/signup' className='rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
+                  Sign up
+                </Link>
+              </>
+            )}
           </nav>
 
           <button type='button' onClick={() => setIsOpen(current => !current)} className='inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-300 transition hover:bg-slate-800 hover:text-white md:hidden'>
@@ -37,14 +68,35 @@ function Navbar() {
         {isOpen && (
           <div className='border-t border-slate-800 py-3 md:hidden'>
             <nav className='flex flex-col gap-1'>
-              <Link to='/' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
-                <LayoutDashboard size={18} />
-                Dashboard
-              </Link>
-              <button type='button' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg bg-cyan-400 px-3 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
-                <Plus size={18} />
-                New task
-              </button>
+              {isAuthenticated ? (
+                <>
+                  <div className='px-3 py-2 text-sm text-slate-500'>
+                    Signed in as{' '}
+                    <span className='text-slate-300'>{user?.name}</span>
+                  </div>
+                  <Link to='/' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
+                    <LayoutDashboard size={18} />
+                    Dashboard
+                  </Link>
+                  <button type='button' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg bg-cyan-400 px-3 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
+                    <Plus size={18} />
+                    New task
+                  </button>
+                  <button type='button' onClick={handleLogout} className='inline-flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
+                    <LogOut size={18} />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to='/login' onClick={closeMenu} className='rounded-lg px-3 py-3 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
+                    Login
+                  </Link>
+                  <Link to='/signup' onClick={closeMenu} className='rounded-lg bg-cyan-400 px-3 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
+                    Sign up
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         )}
