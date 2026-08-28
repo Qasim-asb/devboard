@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 import taskRoutes from './routes/taskRoutes.js'
+import authRoutes from './routes/authRoutes.js'
 
 dotenv.config()
 
@@ -25,6 +26,7 @@ app.get('/api/health', (req, res) => {
 })
 
 app.use('/api/tasks', taskRoutes)
+app.use('/api/auth', authRoutes)
 
 app.use((error, req, res, next) => {
   console.error(error)

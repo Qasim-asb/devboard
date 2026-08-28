@@ -1,11 +1,12 @@
 import express from 'express'
 import Task from '../models/Task.js'
+import requireAuth from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.get('/', async (req, res, next) => {
+router.get('/', requireAuth, async (req, res, next) => {
   try {
-    const tasks = await Task.find().sort({ createdAt: -1 })
+    const tasks = await Task.find({ owner: req.userId }).sort({ createdAt: -1 })
 
     res.json(tasks)
   } catch (error) {
@@ -13,7 +14,7 @@ router.get('/', async (req, res, next) => {
   }
 })
 
-router.post('/', async (req, res, next) => {
+router.post('/', requireAuth, async (req, res, next) => {
   try {
     const title = req.body.title?.trim()
 
@@ -21,7 +22,7 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ message: 'Task title is required' })
     }
 
-    const task = await Task.create({ title })
+    const task = await Task.create({ title, owner: req.userId })
 
     res.status(201).json(task)
   } catch (error) {
@@ -29,10 +30,13 @@ router.post('/', async (req, res, next) => {
   }
 })
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requireAuth, async (req, res, next) => {
   try {
     const task = await Task.findByIdAndUpdate(
-      req.params.id,
+      {
+        _id: req.params.id,
+        owner: req.userId
+      },
       req.body,
       {
         new: true,
@@ -50,9 +54,12 @@ router.patch('/:id', async (req, res, next) => {
   }
 })
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id)
+    const task = await Task.findByIdAndDelete({
+      _id: req.params.id,
+      owner: req.userId
+    })
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' })

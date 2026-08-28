@@ -10,8 +10,14 @@ const taskSchema = new Schema({
   completed: {
     type: Boolean,
     default: false
+  },
+  owner: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
   }
-}, { timestamps: true, })
+}, { timestamps: true })
 
 const Task = model('Task', taskSchema)
 
