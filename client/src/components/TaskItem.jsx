@@ -15,13 +15,21 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
     setIsEditing(false)
   }
 
-  function handleSave() {
+  async function handleSave() {
     const trimmedTitle = title.trim()
 
-    if (!trimmedTitle) return
+    if (!trimmedTitle) {
+      return
+    }
 
-    onUpdate(task._id, trimmedTitle)
+    if (trimmedTitle === task.title) {
+      setIsEditing(false)
+      return
+    }
+
     setIsEditing(false)
+
+    await onUpdate(task._id, trimmedTitle)
   }
 
   function handleKeyDown(e) {
@@ -40,7 +48,7 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
         <input type='text' value={title} onChange={e => setTitle(e.target.value)} onKeyDown={handleKeyDown} autoFocus className='min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400' />
 
         <div className='flex items-center gap-2'>
-          <button type='button' onClick={handleSave} className='inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
+          <button type='button' onClick={handleSave} disabled={!title.trim()} className='inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50'>
             <CheckCircle2 size={16} />
             Save
           </button>

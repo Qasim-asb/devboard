@@ -75,9 +75,19 @@ function useTasks() {
       return false
     }
 
-    try {
-      setError('')
+    const currentTask = tasksRef.current.find(task => task._id === id)
 
+    if (!currentTask) {
+      return false
+    }
+
+    const previousTitle = currentTask.title
+
+    setError('')
+
+    setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, title: trimmedTitle } : task))
+
+    try {
       const { data } = await api.patch(`/tasks/${id}`, { title: trimmedTitle })
 
       setTasks(currentTasks => currentTasks.map(task => task._id === id ? data : task))
@@ -85,6 +95,8 @@ function useTasks() {
       return true
     } catch (error) {
       console.error(error)
+
+      setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, title: previousTitle } : task))
 
       setError(error.response?.data?.message || 'Unable to update task.')
 
