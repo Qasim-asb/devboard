@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import api from '../lib/api'
 
 function useTasks() {
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const tasksRef = useRef([])
+
+  useEffect(() => {
+    tasksRef.current = tasks
+  }, [tasks])
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -75,28 +81,32 @@ function useTasks() {
   }, [])
 
   const toggleTask = useCallback(async (id) => {
-    const currentTask = tasks.find(task => task._id === id)
+    const currentTask = tasksRef.current.find(task => task._id === id)
 
     if (!currentTask) {
       return false
     }
 
+    const previousCompleted = currentTask.completed
+    const nextCompleted = !previousCompleted
+
+    setError('')
+
+    setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, completed: nextCompleted, } : task))
+
     try {
-      setError('')
-
-      const { data } = await api.patch(`/tasks/${id}`, { completed: !currentTask.completed })
-
-      setTasks(currentTasks => currentTasks.map(task => task._id === id ? data : task))
+      await api.patch(`/tasks/${id}`, { completed: nextCompleted })
 
       return true
     } catch (error) {
       console.error(error)
 
+      setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, completed: previousCompleted } : task))
       setError(error.response?.data?.message || 'Unable to update task.')
 
       return false
     }
-  }, [tasks])
+  }, [])
 
   const deleteTask = useCallback(async (id) => {
     try {
