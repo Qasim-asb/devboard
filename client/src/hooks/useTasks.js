@@ -40,17 +40,29 @@ function useTasks() {
       return false
     }
 
-    try {
-      setError('')
+    const temporaryId = `temp-${Date.now()}`
 
+    const optimisticTask = {
+      _id: temporaryId,
+      title: trimmedTitle,
+      completed: false,
+      isOptimistic: true
+    }
+
+    setError('')
+
+    setTasks(currentTasks => [optimisticTask, ...currentTasks])
+
+    try {
       const { data } = await api.post('/tasks', { title: trimmedTitle })
 
-      setTasks(currentTasks => [data, ...currentTasks])
+      setTasks(currentTasks => currentTasks.map(task => task._id === temporaryId ? data : task))
 
       return true
     } catch (error) {
       console.error(error)
 
+      setTasks(currentTasks => currentTasks.filter(task => task._id !== temporaryId))
       setError(error.response?.data?.message || 'Unable to create task.')
       return false
     }
