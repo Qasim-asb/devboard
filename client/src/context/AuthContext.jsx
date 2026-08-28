@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import api from '../lib/api'
 
 const AuthContext = createContext(null)
@@ -20,6 +20,37 @@ function getStoredUser() {
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem('devboard-token')
+
+    if (!token) {
+      setIsCheckingAuth(false)
+      return
+    }
+
+    async function validateSession() {
+      try {
+        const { data } = await api.get('/auth/me')
+
+        const authenticatedUser = data.user
+
+        localStorage.setItem('devboard-user', JSON.stringify(authenticatedUser))
+
+        setUser(authenticatedUser)
+      } catch (error) {
+        localStorage.removeItem('devboard-token')
+        localStorage.removeItem('devboard-user')
+
+        setUser(null)
+      } finally {
+        setIsCheckingAuth(false)
+      }
+    }
+
+    validateSession()
+  }, [])
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })
@@ -50,7 +81,7 @@ function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
-  const value = { user, isAuthenticated: Boolean(user), login, signup, logout }
+  const value = { user, isAuthenticated: Boolean(user), isCheckingAuth, login, signup, logout }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

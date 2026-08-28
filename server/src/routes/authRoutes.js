@@ -2,6 +2,7 @@ import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
+import requireAuth from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -94,6 +95,28 @@ router.post('/login', async (req, res, next) => {
         email: user.email,
       },
       token
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId).select('name email')
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      })
+    }
+
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      }
     })
   } catch (error) {
     next(error)
