@@ -133,16 +133,32 @@ function useTasks() {
   }, [])
 
   const deleteTask = useCallback(async (id) => {
+    const currentTask = tasksRef.current.find(task => task._id === id)
+
+    if (!currentTask) {
+      return false
+    }
+
+    setError('')
+
+    setTasks(currentTasks => currentTasks.filter(task => task._id !== id))
+
     try {
-      setError('')
-
       await api.delete(`/tasks/${id}`)
-
-      setTasks(currentTasks => currentTasks.filter(task => task._id !== id))
 
       return true
     } catch (error) {
       console.error(error)
+
+      setTasks(currentTasks => {
+        const alreadyExists = currentTasks.some((task) => task._id === id)
+
+        if (alreadyExists) {
+          return currentTasks
+        }
+
+        return [currentTask, ...currentTasks]
+      })
 
       setError(error.response?.data?.message || 'Unable to delete task.')
 

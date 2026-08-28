@@ -1,9 +1,24 @@
 import { memo, useState } from 'react'
-import { CheckCircle2, Circle, Pencil, Trash2, X } from 'lucide-react'
+import { CheckCircle2, Circle, LoaderCircle, Pencil, Trash2, X } from 'lucide-react'
 
 const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) {
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(task.title)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (isDeleting) {
+      return
+    }
+
+    setIsDeleting(true)
+
+    const deleted = await onDelete(task._id)
+
+    if (!deleted) {
+      setIsDeleting(false)
+    }
+  }
 
   function handleEdit() {
     setTitle(task.title)
@@ -77,8 +92,8 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
           <Pencil size={17} />
         </button>
 
-        <button type='button' onClick={() => onDelete(task._id)} className='rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-400'>
-          <Trash2 size={17} />
+        <button type='button' onClick={handleDelete} disabled={isDeleting} className='rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-400'>
+          {isDeleting ? <LoaderCircle size={17} className='animate-spin' /> : <Trash2 size={17} />}
         </button>
       </div>
     </div>
