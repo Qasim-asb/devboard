@@ -1,6 +1,7 @@
 import express from 'express'
 import Task from '../models/Task.js'
 import requireAuth from '../middleware/auth.js'
+import mongoose from 'mongoose'
 
 const router = express.Router()
 
@@ -16,6 +17,10 @@ function isValidDate(value) {
   const date = new Date(value)
 
   return !Number.isNaN(date.getTime())
+}
+
+function isValidObjectId(id) {
+  return mongoose.isValidObjectId(id)
 }
 
 router.get('/', requireAuth, async (req, res, next) => {
@@ -196,6 +201,12 @@ router.post('/', requireAuth, async (req, res, next) => {
 
 router.patch('/:id', requireAuth, async (req, res, next) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid task ID'
+      })
+    }
+
     const updates = {}
 
     if (req.body.title !== undefined) {
@@ -262,6 +273,12 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
 
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid task ID'
+      })
+    }
+
     const task = await Task.findOneAndDelete({
       _id: req.params.id,
       owner: req.userId
