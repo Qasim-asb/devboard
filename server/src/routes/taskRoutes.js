@@ -50,33 +50,66 @@ router.get('/', requireAuth, async (req, res, next) => {
               $switch: {
                 branches: [
                   {
-                    case: { $eq: ['$priority', 'high'] },
+                    case: {
+                      $eq: ['$priority', 'high']
+                    },
                     then: 3
                   },
                   {
-                    case: { $eq: ['$priority', 'medium'] },
+                    case: {
+                      $eq: ['$priority', 'medium']
+                    },
                     then: 2
                   },
                   {
-                    case: { $eq: ['$priority', 'low'] },
+                    case: {
+                      $eq: ['$priority', 'low']
+                    },
                     then: 1
-                  },
+                  }
                 ],
                 default: 0
               }
             }
           }
         },
-        { $sort: { priorityRank: -1, createdAt: -1 } },
+        {
+          $sort: {
+            priorityRank: -1,
+            createdAt: -1,
+            _id: -1
+          }
+        },
         { $skip: skip },
         { $limit: limit },
         { $project: { priorityRank: 0 } }
       ])
+    } else if (sort === 'dueDate') {
+      tasks = await Task.aggregate([
+        { $match: filter },
+        {
+          $addFields: {
+            dueDateRank: {
+              $cond: [{ $eq: ['$dueDate', null] }, 1, 0]
+            }
+          }
+        },
+        {
+          $sort: {
+            dueDateRank: 1,
+            dueDate: 1,
+            createdAt: -1,
+            _id: -1
+          }
+        },
+        { $skip: skip },
+        { $limit: limit },
+        { $project: { dueDateRank: 0 } }
+      ])
     } else {
       const sortOptions = {
-        newest: { createdAt: -1 },
-        oldest: { createdAt: 1 },
-        dueDate: { dueDate: 1, createdAt: -1 }
+        newest: { createdAt: -1, _id: -1 },
+        oldest: { createdAt: 1, _id: 1 }
       }
 
       tasks = await Task.find(filter).sort(sortOptions[sort] || sortOptions.newest).skip(skip).limit(limit)
