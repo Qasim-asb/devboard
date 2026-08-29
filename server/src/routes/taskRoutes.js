@@ -82,13 +82,16 @@ router.get('/', requireAuth, async (req, res, next) => {
       tasks = await Task.find(filter).sort(sortOptions[sort] || sortOptions.newest).skip(skip).limit(limit)
     }
 
-    const [total, completedTotal, inProgressTotal] = await Promise.all([
+    const userFilter = { owner: req.userId }
+
+    const [filteredTotal, total, completedTotal, inProgressTotal] = await Promise.all([
       Task.countDocuments(filter),
-      Task.countDocuments({ ...filter, completed: true }),
-      Task.countDocuments({ ...filter, completed: false })
+      Task.countDocuments(userFilter),
+      Task.countDocuments({ ...userFilter, completed: true }),
+      Task.countDocuments({ ...userFilter, completed: false })
     ])
 
-    const pages = Math.ceil(total / limit)
+    const pages = Math.ceil(filteredTotal / limit)
 
     res.json({
       tasks,
@@ -100,7 +103,7 @@ router.get('/', requireAuth, async (req, res, next) => {
       pagination: {
         page,
         limit,
-        total,
+        total: filteredTotal,
         pages,
         hasNextPage: page < pages,
         hasPreviousPage: page > 1
