@@ -6,9 +6,32 @@ const router = express.Router()
 
 router.get('/', requireAuth, async (req, res, next) => {
   try {
-    const tasks = await Task.find({ owner: req.userId }).sort({ createdAt: -1 })
+    const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
 
-    res.json(tasks)
+    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 10, 1), 50)
+
+    const skip = (page - 1) * limit
+
+    const filter = { owner: req.userId }
+
+    const [tasks, total] = await Promise.all([
+      Task.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Task.countDocuments(filter)
+    ])
+
+    const pages = Math.ceil(total / limit)
+
+    res.json({
+      tasks,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages,
+        hasNextPage: page < pages,
+        hasPreviousPage: page > 1
+      }
+    })
   } catch (error) {
     next(error)
   }
