@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import useDebounce from './useDebounce'
 import api from '../lib/api'
 
 const DEFAULT_LIMIT = 10
@@ -17,6 +18,8 @@ function useTasks() {
     sort: 'newest'
   })
 
+  const debouncedSearch = useDebounce(query.search, 300)
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: DEFAULT_LIMIT,
@@ -29,12 +32,19 @@ function useTasks() {
   const [statistics, setStatistics] = useState({ total: 0, completed: 0, inProgress: 0 })
 
   const tasksRef = useRef([])
+  const requestControllerRef = useRef(null)
 
   useEffect(() => {
     tasksRef.current = tasks
   }, [tasks])
 
   const fetchTasks = useCallback(async (nextQuery) => {
+    requestControllerRef.current?.abort()
+
+    const controller = new AbortController()
+
+    requestControllerRef.current = controller
+
     try {
       setIsLoading(true)
       setError('')
@@ -48,23 +58,45 @@ function useTasks() {
         sort: nextQuery.sort
       })
 
-      const { data } = await api.get(`/tasks?${params.toString()}`)
+      const { data } = await api.get(`/tasks?${params.toString()}`, { signal: controller.signal })
 
       setTasks(data.tasks)
       setStatistics(data.statistics)
       setPagination(data.pagination)
     } catch (error) {
+      if (error.code === 'ERR_CANCELED') {
+        return
+      }
+
       console.error(error)
 
       setError(error.response?.data?.message || 'Unable to load tasks.')
     } finally {
-      setIsLoading(false)
+      if (!controller.signal.aborted) {
+        setIsLoading(false)
+      }
     }
   }, [])
 
   useEffect(() => {
-    fetchTasks(query)
-  }, [fetchTasks, query])
+    const requestQuery = { ...query, search: debouncedSearch }
+
+    fetchTasks(requestQuery)
+  }, [
+    fetchTasks,
+    query.page,
+    query.limit,
+    query.status,
+    query.priority,
+    query.sort,
+    debouncedSearch
+  ])
+
+  useEffect(() => {
+    return () => {
+      requestControllerRef.current?.abort()
+    }
+  }, [])
 
   const updateQuery = useCallback(changes => {
     setQuery(currentQuery => ({ ...currentQuery, ...changes }))
