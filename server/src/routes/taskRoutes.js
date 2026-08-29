@@ -4,6 +4,10 @@ import requireAuth from '../middleware/auth.js'
 
 const router = express.Router()
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 router.get('/', requireAuth, async (req, res, next) => {
   try {
     const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
@@ -18,7 +22,7 @@ router.get('/', requireAuth, async (req, res, next) => {
     const filter = { owner: req.userId }
 
     if (search) {
-      filter.title = { $regex: search, $options: 'i' }
+      filter.title = { $regex: escapeRegex(search), $options: 'i' }
     }
 
     if (status === 'active') {
