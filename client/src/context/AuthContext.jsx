@@ -1,7 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import api from '../lib/api'
-
-const AuthContext = createContext(null)
+import AuthContext from './AuthContext'
 
 function getStoredUser() {
   const storedUser = localStorage.getItem('devboard-user')
@@ -18,26 +17,27 @@ function getStoredUser() {
   }
 }
 
+function hasStoredToken() {
+  return Boolean(localStorage.getItem('devboard-token'))
+}
+
 function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser)
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(hasStoredToken)
 
   const refreshUser = useCallback(async () => {
     const token = localStorage.getItem('devboard-token')
 
     if (!token) {
-      setUser(null)
       return false
     }
 
     try {
       const { data } = await api.get('/auth/me')
 
-      const authenticatedUser = data.user
+      localStorage.setItem('devboard-user', JSON.stringify(data.user))
 
-      localStorage.setItem('devboard-user', JSON.stringify(authenticatedUser))
-
-      setUser(authenticatedUser)
+      setUser(data.user)
 
       return true
     } catch {
@@ -51,38 +51,36 @@ function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    const token = localStorage.getItem('devboard-token')
-
-    if (!token) {
-      setIsCheckingAuth(false)
+    if (!hasStoredToken()) {
       return
     }
 
-    refreshUser().finally(() => {
+    async function validateSession() {
+      await refreshUser()
       setIsCheckingAuth(false)
-    })
+    }
+
+    validateSession()
   }, [refreshUser])
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })
 
-    const { user: authenticatedUser, token } = data
+    localStorage.setItem('devboard-token', data.token)
 
-    localStorage.setItem('devboard-token', token)
-    localStorage.setItem('devboard-user', JSON.stringify(authenticatedUser))
+    localStorage.setItem('devboard-user', JSON.stringify(data.user))
 
-    setUser(authenticatedUser)
+    setUser(data.user)
   }, [])
 
   const signup = useCallback(async (name, email, password) => {
     const { data } = await api.post('/auth/signup', { name, email, password })
 
-    const { user: authenticatedUser, token } = data
+    localStorage.setItem('devboard-token', data.token)
 
-    localStorage.setItem('devboard-token', token)
-    localStorage.setItem('devboard-user', JSON.stringify(authenticatedUser))
+    localStorage.setItem('devboard-user', JSON.stringify(data.user))
 
-    setUser(authenticatedUser)
+    setUser(data.user)
   }, [])
 
   const logout = useCallback(() => {
@@ -97,14 +95,4 @@ function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-function useAuth() {
-  const context = useContext(AuthContext)
-
-  if (!context) {
-    throw new Error('useAuth must be used inside AuthProvider')
-  }
-
-  return context
-}
-
-export { AuthProvider, useAuth }
+export { AuthProvider }

@@ -4,6 +4,40 @@ import api from '../lib/api'
 
 const DEFAULT_LIMIT = 10
 
+async function requestTasks({ query, controller, setTasks, setStatistics, setPagination, setIsLoading, setError }) {
+  try {
+    setIsLoading(true)
+    setError('')
+
+    const params = new URLSearchParams({
+      page: String(query.page),
+      limit: String(query.limit),
+      search: query.search,
+      status: query.status,
+      priority: query.priority,
+      sort: query.sort
+    })
+
+    const { data } = await api.get(`/tasks?${params.toString()}`, { signal: controller.signal })
+
+    setTasks(data.tasks)
+    setStatistics(data.statistics)
+    setPagination(data.pagination)
+  } catch (error) {
+    if (error.code === 'ERR_CANCELED') {
+      return
+    }
+
+    console.error(error)
+
+    setError(error.response?.data?.message || 'Unable to load tasks.')
+  } finally {
+    if (!controller.signal.aborted) {
+      setIsLoading(false)
+    }
+  }
+}
+
 function useTasks() {
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -48,59 +82,25 @@ function useTasks() {
     debouncedSearchRef.current = debouncedSearch
   }, [debouncedSearch])
 
-  const fetchTasks = useCallback(async (nextQuery) => {
+  useEffect(() => {
     requestControllerRef.current?.abort()
 
     const controller = new AbortController()
 
     requestControllerRef.current = controller
 
-    try {
-      setIsLoading(true)
-      setError('')
-
-      const params = new URLSearchParams({
-        page: String(nextQuery.page),
-        limit: String(nextQuery.limit),
-        search: nextQuery.search,
-        status: nextQuery.status,
-        priority: nextQuery.priority,
-        sort: nextQuery.sort
-      })
-
-      const { data } = await api.get(`/tasks?${params.toString()}`, { signal: controller.signal })
-
-      setTasks(data.tasks)
-      setStatistics(data.statistics)
-      setPagination(data.pagination)
-    } catch (error) {
-      if (error.code === 'ERR_CANCELED') {
-        return
-      }
-
-      console.error(error)
-
-      setError(error.response?.data?.message || 'Unable to load tasks.')
-    } finally {
-      if (!controller.signal.aborted) {
-        setIsLoading(false)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
     const requestQuery = { ...query, search: debouncedSearch }
 
-    fetchTasks(requestQuery)
-  }, [
-    fetchTasks,
-    query.page,
-    query.limit,
-    query.status,
-    query.priority,
-    query.sort,
-    debouncedSearch
-  ])
+    requestTasks({
+      query: requestQuery,
+      controller,
+      setTasks,
+      setStatistics,
+      setPagination,
+      setIsLoading,
+      setError
+    })
+  }, [query, debouncedSearch])
 
   useEffect(() => {
     return () => {
@@ -109,10 +109,22 @@ function useTasks() {
   }, [])
 
   const refetchCurrentQuery = useCallback(async () => {
-    const currentQuery = queryRef.current
+    requestControllerRef.current?.abort()
 
-    await fetchTasks({ ...currentQuery, search: debouncedSearchRef.current })
-  }, [fetchTasks])
+    const controller = new AbortController()
+
+    requestControllerRef.current = controller
+
+    await requestTasks({
+      query: { ...queryRef.current, search: debouncedSearchRef.current },
+      controller,
+      setTasks,
+      setStatistics,
+      setPagination,
+      setIsLoading,
+      setError
+    })
+  }, [])
 
   const updateQuery = useCallback((changes) => {
     setQuery(currentQuery => ({ ...currentQuery, ...changes }))
