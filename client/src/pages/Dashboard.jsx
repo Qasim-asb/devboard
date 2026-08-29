@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle2, Clock3, ListTodo, Search } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import useTasks from '../hooks/useTasks'
+import useDebounce from '../hooks/useDebounce'
 import TaskForm from '../components/TaskForm'
 import TaskItem from '../components/TaskItem'
-import { useAuth } from '../context/AuthContext'
 
 function Dashboard() {
   const { tasks, statistics, isLoading, error, addTask, updateTask, toggleTask, deleteTask } = useTasks()
 
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [filter, setFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
@@ -16,7 +18,7 @@ function Dashboard() {
   const { user } = useAuth()
 
   const filteredTasks = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
+    const normalizedSearch = debouncedSearch.trim().toLowerCase()
 
     const priorityOrder = { high: 3, medium: 2, low: 1 }
 
@@ -57,7 +59,7 @@ function Dashboard() {
 
       return (new Date(b.createdAt) - new Date(a.createdAt))
     })
-  }, [tasks, search, filter, priorityFilter, sortBy])
+  }, [tasks, debouncedSearch, filter, priorityFilter, sortBy])
 
   return (
     <section className='mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:py-14'>
