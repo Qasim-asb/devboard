@@ -1,8 +1,8 @@
 # DevBoard
 
-DevBoard is a compact full-stack MERN application built for learning and practicing modern React and Node.js development.
+DevBoard is a compact full-stack MERN application built for learning and practicing modern React, Node.js, Express, and MongoDB development.
 
-The project is intentionally kept small while introducing real-world concepts such as reusable components, custom hooks, authentication, REST APIs, MongoDB, and React performance optimization.
+The project is intentionally kept small while introducing practical full-stack concepts such as authentication, user-owned data, REST APIs, custom hooks, React Context, optimistic UI updates, debounced search, pagination, and React performance optimization.
 
 ## Tech Stack
 
@@ -12,6 +12,7 @@ The project is intentionally kept small while introducing real-world concepts su
 - Vite
 - React Router
 - Tailwind CSS
+- Axios
 - Lucide React
 
 ### Backend
@@ -20,184 +21,348 @@ The project is intentionally kept small while introducing real-world concepts su
 - Express.js
 - MongoDB
 - Mongoose
-- JWT Authentication
+- JWT
+- bcryptjs
 
 ## Project Structure
 
-    devboard/
-    ├── client/
-    │   ├── src/
-    │   │   ├── components/
-    │   │   ├── hooks/
-    │   │   ├── pages/
-    │   │   ├── App.jsx
-    │   │   └── main.jsx
-    │   ├── package.json
-    │   └── vite.config.js
-    │
-    ├── server/
-    │   ├── src/
-    │   │   └── server.js
-    │   ├── package.json
-    │   └── .env.example
-    │
-    ├── .gitignore
-    └── README.md
+```text
+devboard/
+├── client/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   ├── TaskForm.jsx
+│   │   │   └── TaskItem.jsx
+│   │   │
+│   │   ├── context/
+│   │   │   ├── AuthContext.js
+│   │   │   └── AuthContext.jsx
+│   │   │
+│   │   ├── hooks/
+│   │   │   ├── useAuth.js
+│   │   │   ├── useDebounce.js
+│   │   │   └── useTasks.js
+│   │   │
+│   │   ├── lib/
+│   │   │   └── api.js
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Login.jsx
+│   │   │   └── Signup.jsx
+│   │   │
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   │
+│   ├── package.json
+│   └── vite.config.js
+│
+├── server/
+│   ├── src/
+│   │   ├── middleware/
+│   │   │   └── auth.js
+│   │   │
+│   │   ├── models/
+│   │   │   ├── Task.js
+│   │   │   └── User.js
+│   │   │
+│   │   ├── routes/
+│   │   │   ├── authRoutes.js
+│   │   │   └── taskRoutes.js
+│   │   │
+│   │   └── server.js
+│   │
+│   ├── .env.example
+│   └── package.json
+│
+├── .gitignore
+└── README.md
+```
 
-## Planned Features
+## Features
 
-The application will be developed incrementally.
+### Authentication
 
-- User authentication
+- User registration
+- User login
+- JWT authentication
 - Protected routes
-- User dashboard
-- Task creation
-- Task editing
-- Task deletion
-- Search and filtering
+- Authenticated session validation
+- Logout
+- User-owned task data
+
+### Task Management
+
+- Create tasks
+- Edit tasks
+- Complete and uncomplete tasks
+- Delete tasks
+- Task priorities
+- Due dates
+- Search
+- Status filtering
+- Priority filtering
 - Sorting
 - Pagination
-- REST API
-- MongoDB persistence
-- Server-side validation
-- Error handling
+
+### User Experience
+
+- Responsive layout
+- Mobile navigation
 - Loading states
+- Error states
 - Empty states
-- Custom React hooks
-- React performance optimization
-- `useMemo`
-- `useCallback`
-- `React.memo`
+- Optimistic updates
+- Request cancellation
+- Debounced search
 
-## React Performance
+## React Concepts
 
-Performance optimization will be introduced when it provides a real benefit.
+DevBoard is also used as a practical React learning project.
 
-### `useMemo`
+### Custom Hooks
 
-Used to avoid repeating expensive calculations such as filtering or sorting.
+Task logic is separated into:
+
+```text
+useTasks
+```
+
+Authentication logic is separated into:
+
+```text
+useAuth
+```
+
+Debounced values are handled by:
+
+```text
+useDebounce
+```
+
+### React Context
+
+Authentication state is shared through:
+
+```text
+AuthProvider
+```
+
+This allows components such as the navbar, login page, signup page, and protected routes to access the same authenticated user state.
 
 ### `useCallback`
 
-Used to preserve function references when passing handlers to memoized child components.
+Used where stable function references are useful, particularly when callbacks are passed to memoized components or when callback identity needs to remain stable across renders.
+
+### `useMemo`
+
+Used when derived data benefits from memoization rather than being recalculated unnecessarily.
+
+The project intentionally avoids using `useMemo` everywhere.
 
 ### `React.memo`
 
-Used to prevent unnecessary re-renders when a component receives unchanged props.
+`TaskItem` is memoized so unchanged task components can avoid unnecessary re-renders when their props remain unchanged.
 
-These features will be added gradually so the project demonstrates not only how they work, but also when they should and should not be used.
+### Optimistic Updates
 
-## Installation
+Task mutations update the UI immediately and synchronize with the backend afterward.
 
-Clone the repository:
+If the request fails, the UI rolls back to its previous state.
 
-    git clone <your-repository-url>
-    cd devboard
+### Debounced Search
 
-### Install Frontend Dependencies
+Search input remains responsive while backend requests are delayed until the user pauses typing.
 
-    cd client
-    npm install
+### Request Cancellation
 
-### Install Backend Dependencies
+`AbortController` is used to prevent obsolete task-list requests from overwriting newer results.
 
-Open another terminal:
+## API Overview
 
-    cd server
-    npm install
+### Authentication
+
+```text
+POST /api/auth/signup
+POST /api/auth/login
+GET  /api/auth/me
+```
+
+### Tasks
+
+```text
+GET    /api/tasks
+POST   /api/tasks
+PATCH  /api/tasks/:id
+DELETE /api/tasks/:id
+```
+
+Task queries support:
+
+```text
+page
+limit
+search
+status
+priority
+sort
+```
+
+Example:
+
+```text
+/api/tasks?page=1&limit=10&search=react&status=active&priority=high&sort=dueDate
+```
 
 ## Environment Variables
 
-Create a local environment file:
+Create:
 
-    server/.env
+```text
+server/.env
+```
 
 Use `server/.env.example` as the template.
 
 Example:
 
-    PORT=4000
-    MONGO_URI=your-mongodb-connection-string
-    JWT_SECRET=your-secret
+```env
+PORT=4000
+CLIENT_URL=http://localhost:5173
+MONGO_URI=
+JWT_SECRET=
+```
 
-Never commit `.env` to GitHub.
+Never commit real environment variables or secrets to GitHub.
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone <your-repository-url>
+cd devboard
+```
+
+### Frontend
+
+```bash
+cd client
+npm install
+```
+
+### Backend
+
+Open another terminal:
+
+```bash
+cd server
+npm install
+```
 
 ## Running the Application
 
 ### Start the Backend
 
-    cd server
-    npm run dev
+```bash
+cd server
+npm run dev
+```
 
-The backend will run at:
+The backend runs at:
 
-    http://localhost:4000
+```text
+http://localhost:4000
+```
 
 ### Start the Frontend
 
 Open another terminal:
 
-    cd client
-    npm run dev
+```bash
+cd client
+npm run dev
+```
 
-The frontend will normally run at:
+The frontend normally runs at:
 
-    http://localhost:5173
+```text
+http://localhost:5173
+```
 
 ## Development Approach
 
-DevBoard is intentionally developed in small milestones.
+DevBoard is developed incrementally.
 
-For each milestone:
+Each meaningful change is:
 
-1. Build one meaningful feature.
-2. Test the feature.
-3. Fix bugs.
-4. Refactor where necessary.
-5. Commit the changes.
-6. Push the commit to GitHub.
+1. Implemented
+2. Tested
+3. Debugged
+4. Refactored when necessary
+5. Committed to Git
+6. Pushed to GitHub
 
-This keeps the project compact and makes the Git history useful as a learning record.
+The goal is to keep the project compact while building features that demonstrate useful real-world concepts.
 
 ## Git Workflow
 
-Check the current status:
+Check the repository:
 
-    git status
+```bash
+git status
+```
 
 Stage changes:
 
-    git add .
+```bash
+git add .
+```
 
-Create a commit:
+Commit changes:
 
-    git commit -m "feat: add task creation"
+```bash
+git commit -m "feat: describe the change"
+```
 
-Push the changes:
+Push changes:
 
-    git push origin main
+```bash
+git push origin main
+```
 
 ### Example Commit Messages
 
-    feat: add task creation
-    feat: add task filtering
-    feat: add protected routes
-    fix: handle invalid task id
-    fix: handle authentication error
-    refactor: extract task item component
-    perf: memoize filtered tasks
+```text
+feat: add task editing
+feat: add task pagination
+feat: add authentication
+fix: validate task object ids
+fix: escape task search regex
+perf: debounce server task search
+refactor: extract task logic into custom hook
+```
 
 ## Learning Goals
 
-The main goal of DevBoard is to build a realistic MERN application without unnecessary complexity.
+The main purpose of DevBoard is to build a realistic MERN application without unnecessary complexity.
 
 The project focuses on:
 
 - Modern React
 - React hooks
-- Component design
 - Custom hooks
-- Performance optimization
+- React Context
+- Component design
+- `useCallback`
+- `useMemo`
+- `React.memo`
+- Optimistic UI
+- Debounced search
+- Request cancellation
 - REST API design
 - Express middleware
 - MongoDB and Mongoose
@@ -209,15 +374,9 @@ The project focuses on:
 
 ## Current Status
 
-### Milestone 1 — Project Foundation
+The project foundation, authentication system, task management, server-side filtering, sorting, and pagination are implemented.
 
-- React/Vite frontend initialized
-- Express backend initialized
-- MongoDB integration planned
-- Git repository initialized
-- Root project structure established
-
-More features will be added step by step.
+The application is still being developed as a learning project, with additional improvements and experiments being added incrementally.
 
 ## License
 
