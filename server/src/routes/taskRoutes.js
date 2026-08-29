@@ -8,6 +8,16 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function isValidDate(value) {
+  if (!value) {
+    return true
+  }
+
+  const date = new Date(value)
+
+  return !Number.isNaN(date.getTime())
+}
+
 router.get('/', requireAuth, async (req, res, next) => {
   try {
     const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
@@ -165,6 +175,12 @@ router.post('/', requireAuth, async (req, res, next) => {
       })
     }
 
+    if (!isValidDate(dueDate)) {
+      return res.status(400).json({
+        message: 'Invalid due date',
+      })
+    }
+
     const task = await Task.create({
       title,
       priority,
@@ -209,7 +225,15 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     }
 
     if (req.body.dueDate !== undefined) {
-      updates.dueDate = req.body.dueDate || null
+      const dueDate = req.body.dueDate || null
+
+      if (!isValidDate(dueDate)) {
+        return res.status(400).json({
+          message: 'Invalid due date',
+        })
+      }
+
+      updates.dueDate = dueDate
     }
 
     const task = await Task.findOneAndUpdate(
