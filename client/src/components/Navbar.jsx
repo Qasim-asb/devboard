@@ -41,7 +41,7 @@ function Navbar() {
                 </button>
 
                 <div className='ml-2 flex items-center gap-3 border-l border-slate-800 pl-3'>
-                  <span className='max-w-32 truncate text-sm text-slate-400'>{user?.name}</span>
+                  <span className='max-w-32 truncate text-sm text-slate-400'>{user?.name || 'Account'}</span>
                   <button type='button' onClick={handleLogout} className='inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
                     <LogOut size={16} />
                     Logout
@@ -72,7 +72,7 @@ function Navbar() {
                 <>
                   <div className='px-3 py-2 text-sm text-slate-500'>
                     Signed in as{' '}
-                    <span className='text-slate-300'>{user?.name}</span>
+                    <span className='text-slate-300'>{user?.name || 'Account'}</span>
                   </div>
                   <Link to='/' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
                     <LayoutDashboard size={18} />

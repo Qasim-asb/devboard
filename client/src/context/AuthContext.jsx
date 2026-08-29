@@ -22,6 +22,34 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
+  const refreshUser = useCallback(async () => {
+    const token = localStorage.getItem('devboard-token')
+
+    if (!token) {
+      setUser(null)
+      return false
+    }
+
+    try {
+      const { data } = await api.get('/auth/me')
+
+      const authenticatedUser = data.user
+
+      localStorage.setItem('devboard-user', JSON.stringify(authenticatedUser))
+
+      setUser(authenticatedUser)
+
+      return true
+    } catch {
+      localStorage.removeItem('devboard-token')
+      localStorage.removeItem('devboard-user')
+
+      setUser(null)
+
+      return false
+    }
+  }, [])
+
   useEffect(() => {
     const token = localStorage.getItem('devboard-token')
 
@@ -30,27 +58,10 @@ function AuthProvider({ children }) {
       return
     }
 
-    async function validateSession() {
-      try {
-        const { data } = await api.get('/auth/me')
-
-        const authenticatedUser = data.user
-
-        localStorage.setItem('devboard-user', JSON.stringify(authenticatedUser))
-
-        setUser(authenticatedUser)
-      } catch (error) {
-        localStorage.removeItem('devboard-token')
-        localStorage.removeItem('devboard-user')
-
-        setUser(null)
-      } finally {
-        setIsCheckingAuth(false)
-      }
-    }
-
-    validateSession()
-  }, [])
+    refreshUser().finally(() => {
+      setIsCheckingAuth(false)
+    })
+  }, [refreshUser])
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })
@@ -81,7 +92,7 @@ function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
-  const value = { user, isAuthenticated: Boolean(user), isCheckingAuth, login, signup, logout }
+  const value = { user, isAuthenticated: Boolean(user), isCheckingAuth, login, signup, logout, refreshUser }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -3,6 +3,7 @@ import { CheckCircle2, Clock3, ListTodo, Search } from 'lucide-react'
 import useTasks from '../hooks/useTasks'
 import TaskForm from '../components/TaskForm'
 import TaskItem from '../components/TaskItem'
+import { useAuth } from '../context/AuthContext'
 
 function Dashboard() {
   const { tasks, statistics, isLoading, error, addTask, updateTask, toggleTask, deleteTask } = useTasks()
@@ -10,6 +11,7 @@ function Dashboard() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
 
+  const { user } = useAuth()
 
   const filteredTasks = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -27,7 +29,7 @@ function Dashboard() {
     <section className='mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:py-14'>
       <div className='max-w-2xl'>
         <p className='text-sm font-semibold text-cyan-400'>Developer workspace</p>
-        <h1 className='mt-2 text-3xl font-bold tracking-tight sm:text-4xl'>Stay on top of your work.</h1>
+        <h1 className='mt-2 text-3xl font-bold tracking-tight sm:text-4xl'>Welcome back, {user?.name || 'Developer'}.</h1>
         <p className='mt-4 leading-7 text-slate-400'>Keep your development tasks organized and focused.</p>
       </div>
 
