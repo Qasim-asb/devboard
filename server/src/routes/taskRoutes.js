@@ -10,19 +10,89 @@ router.get('/', requireAuth, async (req, res, next) => {
 
     const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 10, 1), 50)
 
-    const skip = (page - 1) * limit
+    const search = req.query.search?.trim() || ''
+    const status = req.query.status || 'all'
+    const priority = req.query.priority || 'all'
+    const sort = req.query.sort || 'newest'
 
     const filter = { owner: req.userId }
 
-    const [tasks, total] = await Promise.all([
-      Task.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-      Task.countDocuments(filter)
+    if (search) {
+      filter.title = { $regex: search, $options: 'i' }
+    }
+
+    if (status === 'active') {
+      filter.completed = false
+    }
+
+    if (status === 'completed') {
+      filter.completed = true
+    }
+
+    if (['low', 'medium', 'high'].includes(priority)) {
+      filter.priority = priority
+    }
+
+    const skip = (page - 1) * limit
+
+    let tasks
+
+    if (sort === 'priority') {
+      tasks = await Task.aggregate([
+        { $match: filter },
+        {
+          $addFields: {
+            priorityRank: {
+              $switch: {
+                branches: [
+                  {
+                    case: { $eq: ['$priority', 'high'] },
+                    then: 3
+                  },
+                  {
+                    case: { $eq: ['$priority', 'medium'] },
+                    then: 2
+                  },
+                  {
+                    case: { $eq: ['$priority', 'low'] },
+                    then: 1
+                  },
+                ],
+                default: 0
+              }
+            }
+          }
+        },
+        { $sort: { priorityRank: -1, createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        { $project: { priorityRank: 0 } }
+      ])
+    } else {
+      const sortOptions = {
+        newest: { createdAt: -1 },
+        oldest: { createdAt: 1 },
+        dueDate: { dueDate: 1, createdAt: -1 }
+      }
+
+      tasks = await Task.find(filter).sort(sortOptions[sort] || sortOptions.newest).skip(skip).limit(limit)
+    }
+
+    const [total, completedTotal, inProgressTotal] = await Promise.all([
+      Task.countDocuments(filter),
+      Task.countDocuments({ ...filter, completed: true }),
+      Task.countDocuments({ ...filter, completed: false })
     ])
 
     const pages = Math.ceil(total / limit)
 
     res.json({
       tasks,
+      statistics: {
+        total,
+        completed: completedTotal,
+        inProgress: inProgressTotal
+      },
       pagination: {
         page,
         limit,

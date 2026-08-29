@@ -8,6 +8,15 @@ function useTasks() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const [query, setQuery] = useState({
+    page: 1,
+    limit: DEFAULT_LIMIT,
+    search: '',
+    status: 'all',
+    priority: 'all',
+    sort: 'newest'
+  })
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: DEFAULT_LIMIT,
@@ -17,20 +26,32 @@ function useTasks() {
     hasPreviousPage: false
   })
 
+  const [statistics, setStatistics] = useState({ total: 0, completed: 0, inProgress: 0 })
+
   const tasksRef = useRef([])
 
   useEffect(() => {
     tasksRef.current = tasks
   }, [tasks])
 
-  const fetchTasks = useCallback(async (page = 1, limit = DEFAULT_LIMIT) => {
+  const fetchTasks = useCallback(async (nextQuery) => {
     try {
       setIsLoading(true)
       setError('')
 
-      const { data } = await api.get(`/tasks?page=${page}&limit=${limit}`)
+      const params = new URLSearchParams({
+        page: String(nextQuery.page),
+        limit: String(nextQuery.limit),
+        search: nextQuery.search,
+        status: nextQuery.status,
+        priority: nextQuery.priority,
+        sort: nextQuery.sort
+      })
+
+      const { data } = await api.get(`/tasks?${params.toString()}`)
 
       setTasks(data.tasks)
+      setStatistics(data.statistics)
       setPagination(data.pagination)
     } catch (error) {
       console.error(error)
@@ -42,21 +63,16 @@ function useTasks() {
   }, [])
 
   useEffect(() => {
-    fetchTasks(1, DEFAULT_LIMIT)
-  }, [fetchTasks])
+    fetchTasks(query)
+  }, [fetchTasks, query])
 
-  const changePage = useCallback(
-    async (page) => {
-      if (isLoading) {
-        return
-      }
+  const updateQuery = useCallback(changes => {
+    setQuery(currentQuery => ({ ...currentQuery, ...changes }))
+  }, [])
 
-      if (page < 1 || page > pagination.pages) {
-        return
-      }
-
-      await fetchTasks(page, pagination.limit)
-    }, [fetchTasks, isLoading, pagination.pages, pagination.limit])
+  const changePage = useCallback(page => {
+    setQuery(currentQuery => ({ ...currentQuery, page }))
+  }, [])
 
   const addTask = useCallback(async (taskData) => {
     const title = taskData.title?.trim()
@@ -197,17 +213,7 @@ function useTasks() {
     }
   }, [])
 
-  const statistics = useMemo(() => {
-    const completed = tasks.filter(task => task.completed).length
-
-    return {
-      total: tasks.length,
-      completed,
-      inProgress: tasks.length - completed,
-    }
-  }, [tasks])
-
-  return { tasks, statistics, pagination, isLoading, error, addTask, updateTask, toggleTask, deleteTask, changePage, refetch: fetchTasks }
+  return { tasks, statistics, pagination, query, isLoading, error, addTask, updateTask, toggleTask, deleteTask, updateQuery, changePage, refetch: fetchTasks }
 }
 
 export default useTasks
