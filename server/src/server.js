@@ -10,9 +10,13 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 4000
 
+if (!process.env.CLIENT_URL) {
+  throw new Error('CLIENT_URL is not configured')
+}
+
 app.use(
   cors({
-    origin: 'http://localhost:5173'
+    origin: process.env.CLIENT_URL
   })
 )
 
