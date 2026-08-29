@@ -7,15 +7,16 @@ import TaskForm from '../components/TaskForm'
 import TaskItem from '../components/TaskItem'
 
 function Dashboard() {
-  const { tasks, statistics, isLoading, error, addTask, updateTask, toggleTask, deleteTask } = useTasks()
+  const { tasks, statistics, pagination, isLoading, error, addTask, updateTask, toggleTask, deleteTask, changePage } = useTasks()
+
+  const { user } = useAuth()
 
   const [search, setSearch] = useState('')
-  const debouncedSearch = useDebounce(search, 300)
   const [filter, setFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
 
-  const { user } = useAuth()
+  const debouncedSearch = useDebounce(search, 300)
 
   const filteredTasks = useMemo(() => {
     const normalizedSearch = debouncedSearch.trim().toLowerCase()
@@ -61,6 +62,22 @@ function Dashboard() {
     })
   }, [tasks, debouncedSearch, filter, priorityFilter, sortBy])
 
+  function handlePreviousPage() {
+    if (isLoading || !pagination.hasPreviousPage) {
+      return
+    }
+
+    changePage(pagination.page - 1)
+  }
+
+  function handleNextPage() {
+    if (isLoading || !pagination.hasNextPage) {
+      return
+    }
+
+    changePage(pagination.page + 1)
+  }
+
   return (
     <section className='mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:py-14'>
       <div className='max-w-2xl'>
@@ -92,20 +109,21 @@ function Dashboard() {
                 <Search size={17} className='shrink-0 text-slate-500' />
                 <input type='text' value={search} onChange={e => setSearch(e.target.value)} placeholder='Search tasks' className='min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500' />
               </div>
-              <select value={filter} onChange={e => setFilter(e.target.value)} className='rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none focus:border-cyan-400'>
+              <select value={filter} onChange={e => setFilter(e.target.value)} className='w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none focus:border-cyan-400 sm:w-auto'>
                 <option value='all'>All tasks</option>
                 <option value='active'>In progress</option>
                 <option value='completed'>Completed</option>
               </select>
 
-              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} className='rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none focus:border-cyan-400'>
-                <option value='all'>All priorities</option>
+              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} className='w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none 
+                focus:border-cyan-400 sm:w-auto'>
+                <option value='all'> ll priorities</option>
                 <option value='high'>High priority</option>
                 <option value='medium'>Medium priority</option>
                 <option value='low'>Low priority</option>
               </select>
 
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className='rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none focus:border-cyan-400'>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className='w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none focus:border-cyan-400 sm:w-auto'>
                 <option value='newest'>Newest</option>
                 <option value='oldest'>Oldest</option>
                 <option value='priority'>Priority</option>
@@ -134,6 +152,21 @@ function Dashboard() {
               </div>
             )}
           </div>
+
+          {!isLoading && pagination.pages > 1 && (
+            <div className='mt-6 flex flex-col gap-3 border-t border-slate-800 pt-5 sm:flex-row sm:items-center sm:justify-between'>
+              <button type='button' onClick={handlePreviousPage} disabled={isLoading || !pagination.hasPreviousPage} className='rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40'>Previous</button>
+
+              <span className='text-center text-sm text-slate-400'>
+                Page {pagination.page} of{' '}
+                {pagination.pages}
+              </span>
+
+              <button type='button' onClick={handleNextPage} disabled={isLoading || !pagination.hasNextPage} className='rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40'>
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </section>

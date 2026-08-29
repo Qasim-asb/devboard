@@ -1,10 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import api from '../lib/api'
 
+const DEFAULT_LIMIT = 10
+
 function useTasks() {
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: DEFAULT_LIMIT,
+    total: 0,
+    pages: 0,
+    hasNextPage: false,
+    hasPreviousPage: false
+  })
 
   const tasksRef = useRef([])
 
@@ -12,14 +23,15 @@ function useTasks() {
     tasksRef.current = tasks
   }, [tasks])
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (page = 1, limit = DEFAULT_LIMIT) => {
     try {
       setIsLoading(true)
       setError('')
 
-      const { data } = await api.get('/tasks')
+      const { data } = await api.get(`/tasks?page=${page}&limit=${limit}`)
 
-      setTasks(data)
+      setTasks(data.tasks)
+      setPagination(data.pagination)
     } catch (error) {
       console.error(error)
 
@@ -30,8 +42,21 @@ function useTasks() {
   }, [])
 
   useEffect(() => {
-    fetchTasks()
+    fetchTasks(1, DEFAULT_LIMIT)
   }, [fetchTasks])
+
+  const changePage = useCallback(
+    async (page) => {
+      if (isLoading) {
+        return
+      }
+
+      if (page < 1 || page > pagination.pages) {
+        return
+      }
+
+      await fetchTasks(page, pagination.limit)
+    }, [fetchTasks, isLoading, pagination.pages, pagination.limit])
 
   const addTask = useCallback(async (taskData) => {
     const title = taskData.title?.trim()
@@ -182,7 +207,7 @@ function useTasks() {
     }
   }, [tasks])
 
-  return { tasks, statistics, isLoading, error, addTask, updateTask, toggleTask, deleteTask, refetch: fetchTasks }
+  return { tasks, statistics, pagination, isLoading, error, addTask, updateTask, toggleTask, deleteTask, changePage, refetch: fetchTasks }
 }
 
 export default useTasks
