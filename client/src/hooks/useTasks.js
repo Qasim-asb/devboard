@@ -32,11 +32,21 @@ function useTasks() {
   const [statistics, setStatistics] = useState({ total: 0, completed: 0, inProgress: 0 })
 
   const tasksRef = useRef([])
+  const queryRef = useRef(query)
+  const debouncedSearchRef = useRef(debouncedSearch)
   const requestControllerRef = useRef(null)
 
   useEffect(() => {
     tasksRef.current = tasks
   }, [tasks])
+
+  useEffect(() => {
+    queryRef.current = query
+  }, [query])
+
+  useEffect(() => {
+    debouncedSearchRef.current = debouncedSearch
+  }, [debouncedSearch])
 
   const fetchTasks = useCallback(async (nextQuery) => {
     requestControllerRef.current?.abort()
@@ -98,7 +108,13 @@ function useTasks() {
     }
   }, [])
 
-  const updateQuery = useCallback(changes => {
+  const refetchCurrentQuery = useCallback(async () => {
+    const currentQuery = queryRef.current
+
+    await fetchTasks({ ...currentQuery, search: debouncedSearchRef.current })
+  }, [fetchTasks])
+
+  const updateQuery = useCallback((changes) => {
     setQuery(currentQuery => ({ ...currentQuery, ...changes }))
   }, [])
 
@@ -129,13 +145,13 @@ function useTasks() {
     setTasks(currentTasks => [optimisticTask, ...currentTasks])
 
     try {
-      const { data } = await api.post('/tasks', {
+      await api.post('/tasks', {
         title,
         priority: optimisticTask.priority,
         dueDate: optimisticTask.dueDate
       })
 
-      setTasks(currentTasks => currentTasks.map(task => task._id === temporaryId ? data : task))
+      await refetchCurrentQuery()
 
       return true
     } catch (error) {
@@ -145,7 +161,7 @@ function useTasks() {
       setError(error.response?.data?.message || 'Unable to create task.')
       return false
     }
-  }, [])
+  }, [refetchCurrentQuery])
 
   const updateTask = useCallback(async (id, title) => {
     const trimmedTitle = title.trim()
@@ -167,9 +183,9 @@ function useTasks() {
     setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, title: trimmedTitle } : task))
 
     try {
-      const { data } = await api.patch(`/tasks/${id}`, { title: trimmedTitle })
+      await api.patch(`/tasks/${id}`, { title: trimmedTitle })
 
-      setTasks(currentTasks => currentTasks.map(task => task._id === id ? data : task))
+      await refetchCurrentQuery()
 
       return true
     } catch (error) {
@@ -181,7 +197,7 @@ function useTasks() {
 
       return false
     }
-  }, [])
+  }, [refetchCurrentQuery])
 
   const toggleTask = useCallback(async (id) => {
     const currentTask = tasksRef.current.find(task => task._id === id)
@@ -200,6 +216,8 @@ function useTasks() {
     try {
       await api.patch(`/tasks/${id}`, { completed: nextCompleted })
 
+      await refetchCurrentQuery()
+
       return true
     } catch (error) {
       console.error(error)
@@ -209,7 +227,7 @@ function useTasks() {
 
       return false
     }
-  }, [])
+  }, [refetchCurrentQuery])
 
   const deleteTask = useCallback(async (id) => {
     const currentTask = tasksRef.current.find(task => task._id === id)
@@ -224,6 +242,8 @@ function useTasks() {
 
     try {
       await api.delete(`/tasks/${id}`)
+
+      await refetchCurrentQuery()
 
       return true
     } catch (error) {
@@ -243,9 +263,9 @@ function useTasks() {
 
       return false
     }
-  }, [])
+  }, [refetchCurrentQuery])
 
-  return { tasks, statistics, pagination, query, isLoading, error, addTask, updateTask, toggleTask, deleteTask, updateQuery, changePage, refetch: fetchTasks }
+  return { tasks, statistics, pagination, query, isLoading, error, addTask, updateTask, toggleTask, deleteTask, updateQuery, changePage, refetch: refetchCurrentQuery }
 }
 
 export default useTasks
