@@ -17,12 +17,27 @@ router.get('/', requireAuth, async (req, res, next) => {
 router.post('/', requireAuth, async (req, res, next) => {
   try {
     const title = req.body.title?.trim()
+    const priority = req.body.priority || 'medium'
+    const dueDate = req.body.dueDate || null
 
     if (!title) {
-      return res.status(400).json({ message: 'Task title is required' })
+      return res.status(400).json({
+        message: 'Task title is required'
+      })
     }
 
-    const task = await Task.create({ title, owner: req.userId })
+    if (!['low', 'medium', 'high'].includes(priority)) {
+      return res.status(400).json({
+        message: 'Invalid task priority'
+      })
+    }
+
+    const task = await Task.create({
+      title,
+      priority,
+      dueDate,
+      owner: req.userId
+    })
 
     res.status(201).json(task)
   } catch (error) {
@@ -32,12 +47,44 @@ router.post('/', requireAuth, async (req, res, next) => {
 
 router.patch('/:id', requireAuth, async (req, res, next) => {
   try {
-    const task = await Task.findByIdAndUpdate(
+    const updates = {}
+
+    if (req.body.title !== undefined) {
+      const title = req.body.title.trim()
+
+      if (!title) {
+        return res.status(400).json({
+          message: 'Task title cannot be empty'
+        })
+      }
+
+      updates.title = title
+    }
+
+    if (req.body.completed !== undefined) {
+      updates.completed = Boolean(req.body.completed)
+    }
+
+    if (req.body.priority !== undefined) {
+      if (!['low', 'medium', 'high'].includes(req.body.priority)) {
+        return res.status(400).json({
+          message: 'Invalid task priority'
+        })
+      }
+
+      updates.priority = req.body.priority
+    }
+
+    if (req.body.dueDate !== undefined) {
+      updates.dueDate = req.body.dueDate || null
+    }
+
+    const task = await Task.findOneAndUpdate(
       {
         _id: req.params.id,
         owner: req.userId
       },
-      req.body,
+      updates,
       {
         new: true,
         runValidators: true
@@ -45,7 +92,9 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     )
 
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' })
+      return res.status(404).json({
+        message: 'Task not found'
+      })
     }
 
     res.json(task)

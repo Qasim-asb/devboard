@@ -11,6 +11,15 @@ const taskSchema = new Schema({
     type: Boolean,
     default: false
   },
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'medium'
+  },
+  dueDate: {
+    type: Date,
+    default: null
+  },
   owner: {
     type: Schema.Types.ObjectId,
     ref: 'User',
