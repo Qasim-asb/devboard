@@ -33,10 +33,10 @@ function useTasks() {
     fetchTasks()
   }, [fetchTasks])
 
-  const addTask = useCallback(async (title) => {
-    const trimmedTitle = title.trim()
+  const addTask = useCallback(async (taskData) => {
+    const title = taskData.title?.trim()
 
-    if (!trimmedTitle) {
+    if (!title) {
       return false
     }
 
@@ -44,8 +44,10 @@ function useTasks() {
 
     const optimisticTask = {
       _id: temporaryId,
-      title: trimmedTitle,
+      title,
       completed: false,
+      priority: taskData.priority || 'medium',
+      dueDate: taskData.dueDate || null,
       isOptimistic: true
     }
 
@@ -54,7 +56,11 @@ function useTasks() {
     setTasks(currentTasks => [optimisticTask, ...currentTasks])
 
     try {
-      const { data } = await api.post('/tasks', { title: trimmedTitle })
+      const { data } = await api.post('/tasks', {
+        title,
+        priority: optimisticTask.priority,
+        dueDate: optimisticTask.dueDate
+      })
 
       setTasks(currentTasks => currentTasks.map(task => task._id === temporaryId ? data : task))
 

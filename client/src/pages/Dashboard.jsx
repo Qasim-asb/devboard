@@ -10,20 +10,54 @@ function Dashboard() {
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [priorityFilter, setPriorityFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('newest')
 
   const { user } = useAuth()
 
   const filteredTasks = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
 
-    return tasks.filter(task => {
+    const priorityOrder = { high: 3, medium: 2, low: 1 }
+
+    const visibleTasks = tasks.filter(task => {
       const matchesSearch = task.title.toLowerCase().includes(normalizedSearch)
 
-      const matchesFilter = filter === 'all' || (filter === 'active' && !task.completed) || (filter === 'completed' && task.completed)
+      const matchesStatus = filter === 'all' || (filter === 'active' && !task.completed) || (filter === 'completed' && task.completed)
 
-      return matchesSearch && matchesFilter
+      const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
+
+      return (matchesSearch && matchesStatus && matchesPriority)
     })
-  }, [tasks, search, filter])
+
+    return [...visibleTasks].sort((a, b) => {
+      if (sortBy === 'priority') {
+        return (priorityOrder[b.priority] - priorityOrder[a.priority])
+      }
+
+      if (sortBy === 'dueDate') {
+        if (!a.dueDate && !b.dueDate) {
+          return 0
+        }
+
+        if (!a.dueDate) {
+          return 1
+        }
+
+        if (!b.dueDate) {
+          return -1
+        }
+
+        return (new Date(a.dueDate) - new Date(b.dueDate))
+      }
+
+      if (sortBy === 'oldest') {
+        return (new Date(a.createdAt) - new Date(b.createdAt))
+      }
+
+      return (new Date(b.createdAt) - new Date(a.createdAt))
+    })
+  }, [tasks, search, filter, priorityFilter, sortBy])
 
   return (
     <section className='mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:py-14'>
@@ -51,7 +85,7 @@ function Dashboard() {
               </p>
             </div>
 
-            <div className='flex flex-col gap-3 sm:flex-row'>
+            <div className='flex flex-col gap-3 sm:flex-row sm:flex-wrap'>
               <div className='flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 px-4 py-3'>
                 <Search size={17} className='shrink-0 text-slate-500' />
                 <input type='text' value={search} onChange={e => setSearch(e.target.value)} placeholder='Search tasks' className='min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500' />
@@ -60,6 +94,20 @@ function Dashboard() {
                 <option value='all'>All tasks</option>
                 <option value='active'>In progress</option>
                 <option value='completed'>Completed</option>
+              </select>
+
+              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} className='rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none focus:border-cyan-400'>
+                <option value='all'>All priorities</option>
+                <option value='high'>High priority</option>
+                <option value='medium'>Medium priority</option>
+                <option value='low'>Low priority</option>
+              </select>
+
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className='rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none focus:border-cyan-400'>
+                <option value='newest'>Newest</option>
+                <option value='oldest'>Oldest</option>
+                <option value='priority'>Priority</option>
+                <option value='dueDate'>Due date</option>
               </select>
             </div>
           </div>
