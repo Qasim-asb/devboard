@@ -35,10 +35,10 @@ function Navbar() {
                   Dashboard
                 </Link>
 
-                <button type='button' className='inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
+                <Link to='/dashboard#new-task' className='inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
                   <Plus size={16} />
                   New task
-                </button>
+                </Link>
 
                 <div className='ml-2 flex items-center gap-3 border-l border-slate-800 pl-3'>
                   <span className='max-w-32 truncate text-sm text-slate-400'>{user?.name || 'Account'}</span>
@@ -78,10 +78,10 @@ function Navbar() {
                     <LayoutDashboard size={18} />
                     Dashboard
                   </Link>
-                  <button type='button' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg bg-cyan-400 px-3 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
+                  <Link to='/dashboard#new-task' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg bg-cyan-400 px-3 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300'>
                     <Plus size={18} />
                     New task
-                  </button>
+                  </Link>
                   <button type='button' onClick={handleLogout} className='inline-flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
                     <LogOut size={18} />
                     Logout
