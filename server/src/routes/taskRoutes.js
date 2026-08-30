@@ -199,6 +199,31 @@ router.post('/', requireAuth, async (req, res, next) => {
   }
 })
 
+router.get('/:id', requireAuth, async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid task ID',
+      })
+    }
+
+    const task = await Task.findOne({
+      _id: req.params.id,
+      owner: req.userId
+    })
+
+    if (!task) {
+      return res.status(404).json({
+        message: 'Task not found',
+      })
+    }
+
+    res.json(task)
+  } catch (error) {
+    next(error)
+  }
+})
+
 router.patch('/:id', requireAuth, async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
