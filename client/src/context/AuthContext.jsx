@@ -25,7 +25,7 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser)
   const [isCheckingAuth, setIsCheckingAuth] = useState(hasStoredToken)
 
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (signal) => {
     const token = localStorage.getItem('devboard-token')
 
     if (!token) {
@@ -33,14 +33,26 @@ function AuthProvider({ children }) {
     }
 
     try {
-      const { data } = await api.get('/auth/me')
+      const { data } = await api.get('/auth/me', { signal })
+
+      if (signal?.aborted) {
+        return false
+      }
 
       localStorage.setItem('devboard-user', JSON.stringify(data.user))
 
       setUser(data.user)
 
       return true
-    } catch {
+    } catch (error) {
+      if (error.code === 'ERR_CANCELED') {
+        return false
+      }
+
+      if (signal?.aborted) {
+        return false
+      }
+
       localStorage.removeItem('devboard-token')
       localStorage.removeItem('devboard-user')
 
@@ -55,12 +67,23 @@ function AuthProvider({ children }) {
       return
     }
 
+    const controller = new AbortController()
+    let isMounted = true
+
     async function validateSession() {
-      await refreshUser()
-      setIsCheckingAuth(false)
+      await refreshUser(controller.signal)
+
+      if (isMounted && !controller.signal.aborted) {
+        setIsCheckingAuth(false)
+      }
     }
 
     validateSession()
+
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
   }, [refreshUser])
 
   const login = useCallback(async (email, password) => {
@@ -71,6 +94,7 @@ function AuthProvider({ children }) {
     localStorage.setItem('devboard-user', JSON.stringify(data.user))
 
     setUser(data.user)
+    setIsCheckingAuth(false)
   }, [])
 
   const signup = useCallback(async (name, email, password) => {
@@ -81,6 +105,7 @@ function AuthProvider({ children }) {
     localStorage.setItem('devboard-user', JSON.stringify(data.user))
 
     setUser(data.user)
+    setIsCheckingAuth(false)
   }, [])
 
   const logout = useCallback(() => {
@@ -88,6 +113,7 @@ function AuthProvider({ children }) {
     localStorage.removeItem('devboard-user')
 
     setUser(null)
+    setIsCheckingAuth(false)
   }, [])
 
   const value = { user, isAuthenticated: Boolean(user), isCheckingAuth, login, signup, logout, refreshUser }
