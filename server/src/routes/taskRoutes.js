@@ -5,6 +5,12 @@ import mongoose from 'mongoose'
 
 const router = express.Router()
 
+const VALID_STATUSES = ['all', 'active', 'completed']
+
+const VALID_PRIORITIES = ['all', 'low', 'medium', 'high']
+
+const VALID_SORTS = ['newest', 'oldest', 'priority', 'dueDate']
+
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -46,6 +52,24 @@ router.get('/', requireAuth, async (req, res, next) => {
     const priority = req.query.priority || 'all'
     const sort = req.query.sort || 'newest'
 
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({
+        message: 'Invalid status'
+      })
+    }
+
+    if (!VALID_PRIORITIES.includes(priority)) {
+      return res.status(400).json({
+        message: 'Invalid priority'
+      })
+    }
+
+    if (!VALID_SORTS.includes(sort)) {
+      return res.status(400).json({
+        message: 'Invalid sort'
+      })
+    }
+
     const filter = { owner: req.userId }
 
     if (search) {
@@ -60,7 +84,7 @@ router.get('/', requireAuth, async (req, res, next) => {
       filter.completed = true
     }
 
-    if (['low', 'medium', 'high'].includes(priority)) {
+    if (priority !== 'all') {
       filter.priority = priority
     }
 
