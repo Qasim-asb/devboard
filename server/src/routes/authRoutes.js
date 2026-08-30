@@ -6,25 +6,59 @@ import requireAuth from '../middleware/auth.js'
 
 const router = express.Router()
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 function createToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' })
 }
 
+function isValidEmail(email) {
+  return EMAIL_PATTERN.test(email)
+}
+
+function getPublicUser(user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email
+  }
+}
+
 router.post('/signup', async (req, res, next) => {
   try {
-    const name = req.body.name?.trim()
-    const email = req.body.email?.trim().toLowerCase()
-    const password = req.body.password
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : ''
+
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : ''
+
+    const password = typeof req.body.password === 'string' ? req.body.password : ''
 
     if (!name || !email || !password) {
       return res.status(400).json({
-        message: 'Name, email, and password are required',
+        message: 'Name, email, and password are required'
+      })
+    }
+
+    if (name.length < 2) {
+      return res.status(400).json({
+        message: 'Name must be at least 2 characters'
+      })
+    }
+
+    if (name.length > 50) {
+      return res.status(400).json({
+        message: 'Name must be at most 50 characters'
+      })
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        message: 'Please provide a valid email'
       })
     }
 
     if (password.length < 8) {
       return res.status(400).json({
-        message: 'Password must be at least 8 characters',
+        message: 'Password must be at least 8 characters'
       })
     }
 
@@ -32,7 +66,7 @@ router.post('/signup', async (req, res, next) => {
 
     if (existingUser) {
       return res.status(409).json({
-        message: 'An account with this email already exists',
+        message: 'An account with this email already exists'
       })
     }
 
@@ -47,11 +81,7 @@ router.post('/signup', async (req, res, next) => {
     const token = createToken(user._id.toString())
 
     res.status(201).json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      user: getPublicUser(user),
       token
     })
   } catch (error) {
@@ -61,12 +91,19 @@ router.post('/signup', async (req, res, next) => {
 
 router.post('/login', async (req, res, next) => {
   try {
-    const email = req.body.email?.trim().toLowerCase()
-    const password = req.body.password
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : ''
+
+    const password = typeof req.body.password === 'string' ? req.body.password : ''
 
     if (!email || !password) {
       return res.status(400).json({
-        message: 'Email and password are required',
+        message: 'Email and password are required'
+      })
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        message: 'Please provide a valid email'
       })
     }
 
@@ -89,11 +126,7 @@ router.post('/login', async (req, res, next) => {
     const token = createToken(user._id.toString())
 
     res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      user: getPublicUser(user),
       token
     })
   } catch (error) {
@@ -112,11 +145,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
     }
 
     res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      }
+      user: getPublicUser(user)
     })
   } catch (error) {
     next(error)
