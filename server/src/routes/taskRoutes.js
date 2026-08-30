@@ -88,7 +88,11 @@ router.get('/', requireAuth, async (req, res, next) => {
       filter.priority = priority
     }
 
-    const skip = (page - 1) * limit
+    const filteredTotal = await Task.countDocuments(filter)
+
+    const currentPage = pages > 0 ? Math.min(page, pages) : 1
+
+    const skip = (currentPage - 1) * limit
 
     let tasks
 
@@ -168,8 +172,7 @@ router.get('/', requireAuth, async (req, res, next) => {
 
     const userFilter = { owner: req.userId }
 
-    const [filteredTotal, total, completedTotal, inProgressTotal] = await Promise.all([
-      Task.countDocuments(filter),
+    const [total, completedTotal, inProgressTotal] = await Promise.all([
       Task.countDocuments(userFilter),
       Task.countDocuments({ ...userFilter, completed: true }),
       Task.countDocuments({ ...userFilter, completed: false })
@@ -185,12 +188,12 @@ router.get('/', requireAuth, async (req, res, next) => {
         inProgress: inProgressTotal
       },
       pagination: {
-        page,
+        page: currentPage,
         limit,
         total: filteredTotal,
         pages,
-        hasNextPage: page < pages,
-        hasPreviousPage: page > 1
+        hasNextPage: currentPage < pages,
+        hasPreviousPage: currentPage > 1
       }
     })
   } catch (error) {
