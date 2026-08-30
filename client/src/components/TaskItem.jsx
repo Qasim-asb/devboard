@@ -1,5 +1,6 @@
 import { memo, useState } from 'react'
 import { CalendarDays, CheckCircle2, Circle, LoaderCircle, Pencil, Trash2, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 function getDueDateLabel(dueDate) {
   if (!dueDate) {
@@ -36,20 +37,6 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
   const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '')
   const [isDeleting, setIsDeleting] = useState(false)
 
-  async function handleDelete() {
-    if (isDeleting) {
-      return
-    }
-
-    setIsDeleting(true)
-
-    const deleted = await onDelete(task._id)
-
-    if (!deleted) {
-      setIsDeleting(false)
-    }
-  }
-
   function handleEdit() {
     setTitle(task.title)
     setPriority(task.priority)
@@ -77,7 +64,9 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
       dueDate: dueDate || null
     }
 
-    const hasChanges = trimmedTitle !== task.title || priority !== task.priority || (dueDate || null) !== (task.dueDate ? task.dueDate.slice(0, 10) : null)
+    const currentDueDate = task.dueDate ? task.dueDate.slice(0, 10) : null
+
+    const hasChanges = trimmedTitle !== task.title || priority !== task.priority || (dueDate || null) !== currentDueDate
 
     if (!hasChanges) {
       setIsEditing(false)
@@ -96,6 +85,20 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
 
     if (e.key === 'Escape') {
       handleCancel()
+    }
+  }
+
+  async function handleDelete() {
+    if (isDeleting) {
+      return
+    }
+
+    setIsDeleting(true)
+
+    const deleted = await onDelete(task._id)
+
+    if (!deleted) {
+      setIsDeleting(false)
     }
   }
 
@@ -146,9 +149,11 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
           </button>
 
           <div className='min-w-0 flex-1'>
-            <p className={`break-words text-sm leading-6 ${task.completed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-              {task.title}
-            </p>
+            <Link to={`/dashboard/tasks/${task._id}`} className='block rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60'>
+              <p className={`break-words text-sm leading-6 transition hover:text-cyan-300 ${task.completed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                {task.title}
+              </p>
+            </Link>
 
             <div className='mt-2 flex flex-wrap items-center gap-2'>
               <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${task.priority === 'high' ? 'bg-red-500/10 text-red-300' : task.priority === 'low' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-300'}`}>
