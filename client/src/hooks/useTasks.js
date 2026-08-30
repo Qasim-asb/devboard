@@ -38,18 +38,18 @@ async function requestTasks({ query, controller, setTasks, setStatistics, setPag
   }
 }
 
-function useTasks() {
+function useTasks(initialQuery = {}) {
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
   const [query, setQuery] = useState({
-    page: 1,
+    page: initialQuery.page || 1,
     limit: DEFAULT_LIMIT,
-    search: '',
-    status: 'all',
-    priority: 'all',
-    sort: 'newest'
+    search: initialQuery.search || '',
+    status: initialQuery.status || 'all',
+    priority: initialQuery.priority || 'all',
+    sort: initialQuery.sort || 'newest'
   })
 
   const debouncedSearch = useDebounce(query.search, 300)
@@ -89,7 +89,14 @@ function useTasks() {
 
     requestControllerRef.current = controller
 
-    const requestQuery = { ...query, search: debouncedSearch }
+    const requestQuery = {
+      page: query.page,
+      limit: query.limit,
+      search: debouncedSearch,
+      status: query.status,
+      priority: query.priority,
+      sort: query.sort
+    }
 
     requestTasks({
       query: requestQuery,
@@ -100,7 +107,7 @@ function useTasks() {
       setIsLoading,
       setError
     })
-  }, [query, debouncedSearch])
+  }, [query.page, query.limit, query.status, query.priority, query.sort, debouncedSearch])
 
   useEffect(() => {
     return () => {
