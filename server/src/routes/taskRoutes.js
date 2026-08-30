@@ -90,6 +90,8 @@ router.get('/', requireAuth, async (req, res, next) => {
 
     const filteredTotal = await Task.countDocuments(filter)
 
+    const pages = Math.ceil(filteredTotal / limit)
+
     const currentPage = pages > 0 ? Math.min(page, pages) : 1
 
     const skip = (currentPage - 1) * limit
@@ -177,8 +179,6 @@ router.get('/', requireAuth, async (req, res, next) => {
       Task.countDocuments({ ...userFilter, completed: true }),
       Task.countDocuments({ ...userFilter, completed: false })
     ])
-
-    const pages = Math.ceil(filteredTotal / limit)
 
     res.json({
       tasks,
