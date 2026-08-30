@@ -1,71 +1,96 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 import useDebounce from './useDebounce'
 import api from '../lib/api'
 
 const DEFAULT_LIMIT = 10
 
-async function requestTasks({ query, controller, setTasks, setStatistics, setPagination, setIsLoading, setError }) {
-  try {
-    setIsLoading(true)
-    setError('')
+const initialPagination = {
+  page: 1,
+  limit: DEFAULT_LIMIT,
+  total: 0,
+  pages: 0,
+  hasNextPage: false,
+  hasPreviousPage: false
+}
 
-    const params = new URLSearchParams({
-      page: String(query.page),
-      limit: String(query.limit),
-      search: query.search,
-      status: query.status,
-      priority: query.priority,
-      sort: query.sort
-    })
+const initialStatistics = { total: 0, completed: 0, inProgress: 0 }
 
-    const { data } = await api.get(`/tasks?${params.toString()}`, { signal: controller.signal })
+function tasksReducer(state, action) {
+  switch (action.type) {
+    case 'FETCH_START':
+      return {
+        ...state,
+        isLoading: true,
+        error: ''
+      }
 
-    setTasks(data.tasks)
-    setStatistics(data.statistics)
-    setPagination(data.pagination)
-  } catch (error) {
-    if (error.code === 'ERR_CANCELED') {
-      return
-    }
+    case 'FETCH_SUCCESS':
+      return {
+        ...state,
+        tasks: action.payload.tasks,
+        statistics: action.payload.statistics,
+        pagination: action.payload.pagination,
+        isLoading: false,
+        error: ''
+      }
 
-    console.error(error)
+    case 'FETCH_ERROR':
+      return {
+        ...state,
+        isLoading: false,
+        error: action.payload
+      }
 
-    setError(error.response?.data?.message || 'Unable to load tasks.')
-  } finally {
-    if (!controller.signal.aborted) {
-      setIsLoading(false)
-    }
+    case 'SET_QUERY':
+      return {
+        ...state,
+        query: {
+          ...state.query,
+          ...action.payload
+        }
+      }
+
+    case 'SET_TASKS':
+      return {
+        ...state,
+        tasks: action.payload
+      }
+
+    default:
+      return state
   }
 }
 
-function useTasks(initialQuery = {}) {
-  const [tasks, setTasks] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
+function createInitialState(initialQuery) {
+  return {
+    tasks: [],
+    statistics: initialStatistics,
+    pagination: initialPagination,
+    query: {
+      page: initialQuery.page || 1,
+      limit: DEFAULT_LIMIT,
+      search: initialQuery.search || '',
+      status: initialQuery.status || 'all',
+      priority: initialQuery.priority || 'all',
+      sort: initialQuery.sort || 'newest'
+    },
+    isLoading: true,
+    error: ''
+  }
+}
 
-  const [query, setQuery] = useState({
-    page: initialQuery.page || 1,
-    limit: DEFAULT_LIMIT,
-    search: initialQuery.search || '',
-    status: initialQuery.status || 'all',
-    priority: initialQuery.priority || 'all',
-    sort: initialQuery.sort || 'newest'
-  })
+function getErrorMessage(error, fallback) {
+  return (error.response?.data?.message || fallback)
+}
+
+function useTasks(initialQuery = {}) {
+  const [state, dispatch] = useReducer(tasksReducer, initialQuery, createInitialState)
+
+  const { tasks, statistics, pagination, query, isLoading, error } = state
 
   const debouncedSearch = useDebounce(query.search, 300)
 
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: DEFAULT_LIMIT,
-    total: 0,
-    pages: 0,
-    hasNextPage: false,
-    hasPreviousPage: false
-  })
-
-  const [statistics, setStatistics] = useState({ total: 0, completed: 0, inProgress: 0 })
-
-  const tasksRef = useRef([])
+  const tasksRef = useRef(tasks)
   const queryRef = useRef(query)
   const debouncedSearchRef = useRef(debouncedSearch)
   const requestControllerRef = useRef(null)
@@ -98,15 +123,52 @@ function useTasks(initialQuery = {}) {
       sort: query.sort
     }
 
-    requestTasks({
-      query: requestQuery,
-      controller,
-      setTasks,
-      setStatistics,
-      setPagination,
-      setIsLoading,
-      setError
-    })
+    dispatch({ type: 'FETCH_START' })
+
+    async function fetchTasks() {
+      try {
+        const params = new URLSearchParams({
+          page: String(requestQuery.page),
+          limit: String(requestQuery.limit),
+          search: requestQuery.search,
+          status: requestQuery.status,
+          priority: requestQuery.priority,
+          sort: requestQuery.sort
+        })
+
+        const { data } = await api.get(`/tasks?${params.toString()}`, { signal: controller.signal })
+
+        if (controller.signal.aborted) {
+          return
+        }
+
+        dispatch({ type: 'FETCH_SUCCESS', payload: data })
+
+        if (data.pagination.page !== requestQuery.page) {
+          dispatch({
+            type: 'SET_QUERY',
+            payload: { page: data.pagination.page }
+          })
+        }
+      } catch (error) {
+        if (error.code === 'ERR_CANCELED' || controller.signal.aborted) {
+          return
+        }
+
+        console.error(error)
+
+        dispatch({
+          type: 'FETCH_ERROR',
+          payload: getErrorMessage(error, 'Unable to load tasks.')
+        })
+      }
+    }
+
+    fetchTasks()
+
+    return () => {
+      controller.abort()
+    }
   }, [query.page, query.limit, query.status, query.priority, query.sort, debouncedSearch])
 
   useEffect(() => {
@@ -122,23 +184,59 @@ function useTasks(initialQuery = {}) {
 
     requestControllerRef.current = controller
 
-    await requestTasks({
-      query: { ...queryRef.current, search: debouncedSearchRef.current },
-      controller,
-      setTasks,
-      setStatistics,
-      setPagination,
-      setIsLoading,
-      setError
-    })
+    dispatch({ type: 'FETCH_START' })
+
+    const currentQuery = queryRef.current
+
+    const requestQuery = { ...currentQuery, search: debouncedSearchRef.current }
+
+    try {
+      const params = new URLSearchParams({
+        page: String(requestQuery.page),
+        limit: String(requestQuery.limit),
+        search: requestQuery.search,
+        status: requestQuery.status,
+        priority: requestQuery.priority,
+        sort: requestQuery.sort
+      })
+
+      const { data } = await api.get(`/tasks?${params.toString()}`, { signal: controller.signal })
+
+      if (controller.signal.aborted) {
+        return
+      }
+
+      dispatch({ type: 'FETCH_SUCCESS', payload: data })
+
+      if (data.pagination.page !== requestQuery.page) {
+        dispatch({
+          type: 'SET_QUERY',
+          payload: { page: data.pagination.page }
+        })
+      }
+    } catch (error) {
+      if (error.code === 'ERR_CANCELED' || controller.signal.aborted) {
+        return
+      }
+
+      console.error(error)
+
+      dispatch({
+        type: 'FETCH_ERROR',
+        payload: getErrorMessage(error, 'Unable to load tasks.')
+      })
+    }
   }, [])
 
-  const updateQuery = useCallback((changes) => {
-    setQuery(currentQuery => ({ ...currentQuery, ...changes }))
+  const updateQuery = useCallback(changes => {
+    dispatch({ type: 'SET_QUERY', payload: changes })
   }, [])
 
   const changePage = useCallback(page => {
-    setQuery(currentQuery => ({ ...currentQuery, page }))
+    dispatch({
+      type: 'SET_QUERY',
+      payload: { page }
+    })
   }, [])
 
   const addTask = useCallback(async (taskData) => {
@@ -159,9 +257,10 @@ function useTasks(initialQuery = {}) {
       isOptimistic: true
     }
 
-    setError('')
-
-    setTasks(currentTasks => [optimisticTask, ...currentTasks])
+    dispatch({
+      type: 'SET_TASKS',
+      payload: [optimisticTask, ...tasksRef.current]
+    })
 
     try {
       await api.post('/tasks', {
@@ -176,8 +275,16 @@ function useTasks(initialQuery = {}) {
     } catch (error) {
       console.error(error)
 
-      setTasks(currentTasks => currentTasks.filter(task => task._id !== temporaryId))
-      setError(error.response?.data?.message || 'Unable to create task.')
+      dispatch({
+        type: 'SET_TASKS',
+        payload: tasksRef.current.filter(task => task._id !== temporaryId)
+      })
+
+      dispatch({
+        type: 'FETCH_ERROR',
+        payload: getErrorMessage(error, 'Unable to create task.')
+      })
+
       return false
     }
   }, [refetchCurrentQuery])
@@ -204,9 +311,10 @@ function useTasks(initialQuery = {}) {
       dueDate: updates.dueDate !== undefined ? updates.dueDate || null : currentTask.dueDate
     }
 
-    setError('')
-
-    setTasks(currentTasks => currentTasks.map(task => task._id === id ? optimisticTask : task))
+    dispatch({
+      type: 'SET_TASKS',
+      payload: tasksRef.current.map(task => task._id === id ? optimisticTask : task)
+    })
 
     try {
       await api.patch(`/tasks/${id}`, {
@@ -221,9 +329,15 @@ function useTasks(initialQuery = {}) {
     } catch (error) {
       console.error(error)
 
-      setTasks(currentTasks => currentTasks.map(task => task._id === id ? previousTask : task))
+      dispatch({
+        type: 'SET_TASKS',
+        payload: tasksRef.current.map(task => task._id === id ? previousTask : task)
+      })
 
-      setError(error.response?.data?.message || 'Unable to update task.')
+      dispatch({
+        type: 'FETCH_ERROR',
+        payload: getErrorMessage(error, 'Unable to update task.')
+      })
 
       return false
     }
@@ -239,9 +353,10 @@ function useTasks(initialQuery = {}) {
     const previousCompleted = currentTask.completed
     const nextCompleted = !previousCompleted
 
-    setError('')
-
-    setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, completed: nextCompleted, } : task))
+    dispatch({
+      type: 'SET_TASKS',
+      payload: tasksRef.current.map(task => task._id === id ? { ...task, completed: nextCompleted } : task)
+    })
 
     try {
       await api.patch(`/tasks/${id}`, { completed: nextCompleted })
@@ -252,8 +367,15 @@ function useTasks(initialQuery = {}) {
     } catch (error) {
       console.error(error)
 
-      setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, completed: previousCompleted } : task))
-      setError(error.response?.data?.message || 'Unable to update task.')
+      dispatch({
+        type: 'SET_TASKS',
+        payload: tasksRef.current.map(task => task._id === id ? { ...task, completed: previousCompleted } : task)
+      })
+
+      dispatch({
+        type: 'FETCH_ERROR',
+        payload: getErrorMessage(error, 'Unable to update task.')
+      })
 
       return false
     }
@@ -266,9 +388,10 @@ function useTasks(initialQuery = {}) {
       return false
     }
 
-    setError('')
-
-    setTasks(currentTasks => currentTasks.filter(task => task._id !== id))
+    dispatch({
+      type: 'SET_TASKS',
+      payload: tasksRef.current.filter(task => task._id !== id)
+    })
 
     try {
       await api.delete(`/tasks/${id}`)
@@ -279,17 +402,19 @@ function useTasks(initialQuery = {}) {
     } catch (error) {
       console.error(error)
 
-      setTasks(currentTasks => {
-        const alreadyExists = currentTasks.some((task) => task._id === id)
+      const taskExists = tasksRef.current.some(task => task._id === id)
 
-        if (alreadyExists) {
-          return currentTasks
-        }
+      if (!taskExists) {
+        dispatch({
+          type: 'SET_TASKS',
+          payload: [currentTask, ...tasksRef.current]
+        })
+      }
 
-        return [currentTask, ...currentTasks]
+      dispatch({
+        type: 'FETCH_ERROR',
+        payload: getErrorMessage(error, 'Unable to delete task.')
       })
-
-      setError(error.response?.data?.message || 'Unable to delete task.')
 
       return false
     }
