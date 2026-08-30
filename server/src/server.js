@@ -7,12 +7,16 @@ import authRoutes from './routes/authRoutes.js'
 
 dotenv.config()
 
+const requiredEnvVariables = ['MONGO_URI', 'JWT_SECRET', 'CLIENT_URL']
+
+const missingEnvVariables = requiredEnvVariables.filter(name => !process.env[name])
+
+if (missingEnvVariables.length > 0) {
+  throw new Error(`Missing required environment variables: ${missingEnvVariables.join(', ')}`)
+}
+
 const app = express()
 const PORT = process.env.PORT || 4000
-
-if (!process.env.CLIENT_URL) {
-  throw new Error('CLIENT_URL is not configured')
-}
 
 app.use(
   cors({
