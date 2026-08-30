@@ -32,6 +32,8 @@ function getDueDateLabel(dueDate) {
 const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) {
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(task.title)
+  const [priority, setPriority] = useState(task.priority)
+  const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '')
   const [isDeleting, setIsDeleting] = useState(false)
 
   async function handleDelete() {
@@ -50,11 +52,15 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
 
   function handleEdit() {
     setTitle(task.title)
+    setPriority(task.priority)
+    setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '')
     setIsEditing(true)
   }
 
   function handleCancel() {
     setTitle(task.title)
+    setPriority(task.priority)
+    setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '')
     setIsEditing(false)
   }
 
@@ -65,14 +71,22 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
       return
     }
 
-    if (trimmedTitle === task.title) {
+    const updates = {
+      title: trimmedTitle,
+      priority,
+      dueDate: dueDate || null
+    }
+
+    const hasChanges = trimmedTitle !== task.title || priority !== task.priority || (dueDate || null) !== (task.dueDate ? task.dueDate.slice(0, 10) : null)
+
+    if (!hasChanges) {
       setIsEditing(false)
       return
     }
 
     setIsEditing(false)
 
-    await onUpdate(task._id, trimmedTitle)
+    await onUpdate(task._id, updates)
   }
 
   function handleKeyDown(e) {
@@ -87,19 +101,37 @@ const TaskItem = memo(function TaskItem({ task, onToggle, onUpdate, onDelete }) 
 
   if (isEditing) {
     return (
-      <div className='flex flex-col gap-3 rounded-xl border border-cyan-400/40 bg-slate-950 p-4 sm:flex-row sm:items-center'>
-        <input type='text' value={title} onChange={e => setTitle(e.target.value)} onKeyDown={handleKeyDown} autoFocus className='min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400' />
+      <div className='rounded-xl border border-cyan-400/40 bg-slate-950 p-4'>
+        <div className='space-y-4'>
+          <input type='text' value={title} onChange={e => setTitle(e.target.value)} onKeyDown={handleKeyDown} autoFocus className='w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400' />
 
-        <div className='flex items-center gap-2'>
-          <button type='button' onClick={handleSave} disabled={!title.trim()} className='inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50'>
-            <CheckCircle2 size={16} />
-            Save
-          </button>
+          <div className='grid gap-3 sm:grid-cols-2'>
+            <div>
+              <label className='mb-2 block text-xs font-medium text-slate-400'>Priority</label>
+              <select value={priority} onChange={e => setPriority(e.target.value)} className='w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none focus:border-cyan-400'>
+                <option value='low'>Low</option>
+                <option value='medium'>Medium</option>
+                <option value='high'>High</option>
+              </select>
+            </div>
 
-          <button type='button' onClick={handleCancel} className='inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800'>
-            <X size={16} />
-            Cancel
-          </button>
+            <div>
+              <label className='mb-2 block text-xs font-medium text-slate-400'>Due date</label>
+              <input type='date' value={dueDate} onChange={e => setDueDate(e.target.value)} className='w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none focus:border-cyan-400' />
+            </div>
+          </div>
+
+          <div className='flex flex-col gap-2 sm:flex-row sm:justify-end'>
+            <button type='button' onClick={handleSave} disabled={!title.trim()} className='inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50'>
+              <CheckCircle2 size={16} />
+              Save
+            </button>
+
+            <button type='button' onClick={handleCancel} className='inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800'>
+              <X size={16} />
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     )

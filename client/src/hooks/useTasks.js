@@ -182,10 +182,10 @@ function useTasks(initialQuery = {}) {
     }
   }, [refetchCurrentQuery])
 
-  const updateTask = useCallback(async (id, title) => {
-    const trimmedTitle = title.trim()
+  const updateTask = useCallback(async (id, updates) => {
+    const title = updates.title?.trim()
 
-    if (!trimmedTitle) {
+    if (!title) {
       return false
     }
 
@@ -195,14 +195,25 @@ function useTasks(initialQuery = {}) {
       return false
     }
 
-    const previousTitle = currentTask.title
+    const previousTask = currentTask
+
+    const optimisticTask = {
+      ...currentTask,
+      title,
+      priority: updates.priority ?? currentTask.priority,
+      dueDate: updates.dueDate !== undefined ? updates.dueDate || null : currentTask.dueDate
+    }
 
     setError('')
 
-    setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, title: trimmedTitle } : task))
+    setTasks(currentTasks => currentTasks.map(task => task._id === id ? optimisticTask : task))
 
     try {
-      await api.patch(`/tasks/${id}`, { title: trimmedTitle })
+      await api.patch(`/tasks/${id}`, {
+        title: optimisticTask.title,
+        priority: optimisticTask.priority,
+        dueDate: optimisticTask.dueDate
+      })
 
       await refetchCurrentQuery()
 
@@ -210,7 +221,7 @@ function useTasks(initialQuery = {}) {
     } catch (error) {
       console.error(error)
 
-      setTasks(currentTasks => currentTasks.map(task => task._id === id ? { ...task, title: previousTitle } : task))
+      setTasks(currentTasks => currentTasks.map(task => task._id === id ? previousTask : task))
 
       setError(error.response?.data?.message || 'Unable to update task.')
 
