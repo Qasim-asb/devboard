@@ -22,7 +22,7 @@ function Navbar() {
     <header className='border-b border-slate-800 bg-slate-950'>
       <div className='mx-auto max-w-6xl px-4 sm:px-6'>
         <div className='flex h-16 items-center justify-between'>
-          <Link to='/' onClick={closeMenu} className='flex items-center gap-2'>
+          <Link to='/dashboard' onClick={closeMenu} className='flex items-center gap-2'>
             <span className='flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400 font-bold text-slate-950'>D</span>
             <span className='text-lg font-semibold tracking-tight'>DevBoard</span>
           </Link>
@@ -30,7 +30,7 @@ function Navbar() {
           <nav className='hidden items-center gap-2 md:flex'>
             {isAuthenticated ? (
               <>
-                <Link to='/' className='inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
+                <Link to='/dashboard' className='inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
                   <LayoutDashboard size={16} />
                   Dashboard
                 </Link>
@@ -74,7 +74,7 @@ function Navbar() {
                     Signed in as{' '}
                     <span className='text-slate-300'>{user?.name || 'Account'}</span>
                   </div>
-                  <Link to='/' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
+                  <Link to='/dashboard' onClick={closeMenu} className='inline-flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white'>
                     <LayoutDashboard size={18} />
                     Dashboard
                   </Link>
