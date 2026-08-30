@@ -3,34 +3,7 @@ import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, Pencil, Trash2 }
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import api from '../lib/api'
 import TaskEditor from '../components/TaskEditor'
-
-function getDueDateLabel(dueDate) {
-  if (!dueDate) {
-    return 'No due date'
-  }
-
-  const today = new Date()
-  const due = new Date(dueDate)
-
-  today.setHours(0, 0, 0, 0)
-  due.setHours(0, 0, 0, 0)
-
-  const difference = Math.ceil((due - today) / (1000 * 60 * 60 * 24))
-
-  if (difference < 0) {
-    return 'Overdue'
-  }
-
-  if (difference === 0) {
-    return 'Due today'
-  }
-
-  if (difference === 1) {
-    return 'Due tomorrow'
-  }
-
-  return `Due ${due.toLocaleDateString()}`
-}
+import { getDueDateLabel } from '../lib/taskUtils'
 
 function TaskDetails() {
   const { id } = useParams()
