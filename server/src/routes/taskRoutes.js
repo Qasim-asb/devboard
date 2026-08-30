@@ -10,13 +10,25 @@ function escapeRegex(value) {
 }
 
 function isValidDate(value) {
-  if (!value) {
+  if (value === null || value === undefined || value === '') {
     return true
   }
 
-  const date = new Date(value)
+  if (typeof value !== 'string') {
+    return false
+  }
 
-  return !Number.isNaN(date.getTime())
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/
+
+  if (!datePattern.test(value)) {
+    return false
+  }
+
+  const [year, month, day] = value.split('-').map(Number)
+
+  const date = new Date(Date.UTC(year, month - 1, day))
+
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
 }
 
 function isValidObjectId(id) {
@@ -235,6 +247,12 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     const updates = {}
 
     if (req.body.title !== undefined) {
+      if (typeof req.body.title !== 'string') {
+        return res.status(400).json({
+          message: 'Invalid task title'
+        })
+      }
+
       const title = req.body.title.trim()
 
       if (!title) {
@@ -247,7 +265,13 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     }
 
     if (req.body.completed !== undefined) {
-      updates.completed = Boolean(req.body.completed)
+      if (typeof req.body.completed !== 'boolean') {
+        return res.status(400).json({
+          message: 'Invalid completed value'
+        })
+      }
+
+      updates.completed = req.body.completed
     }
 
     if (req.body.priority !== undefined) {
@@ -270,6 +294,12 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
       }
 
       updates.dueDate = dueDate
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        message: 'No valid fields to update'
+      })
     }
 
     const task = await Task.findOneAndUpdate(
