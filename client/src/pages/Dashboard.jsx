@@ -12,29 +12,27 @@ const VALID_PRIORITIES = ['all', 'high', 'medium', 'low']
 
 const VALID_SORTS = ['newest', 'oldest', 'priority', 'dueDate']
 
-function Dashboard() {
-  const [searchParams, setSearchParams] = useSearchParams()
-
-  const initialQuery = {
+function getQueryFromSearchParams(searchParams) {
+  return {
     page: Math.max(Number(searchParams.get('page')) || 1, 1),
     search: searchParams.get('search') || '',
     status: VALID_STATUSES.includes(searchParams.get('status')) ? searchParams.get('status') : 'all',
     priority: VALID_PRIORITIES.includes(searchParams.get('priority')) ? searchParams.get('priority') : 'all',
     sort: VALID_SORTS.includes(searchParams.get('sort')) ? searchParams.get('sort') : 'newest'
   }
+}
+
+function Dashboard() {
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const initialQuery = getQueryFromSearchParams(searchParams)
 
   const { tasks, statistics, pagination, query, isLoading, error, addTask, updateTask, toggleTask, deleteTask, updateQuery } = useTasks(initialQuery)
 
   const { user } = useAuth()
 
   useEffect(() => {
-    const nextQuery = {
-      page: Math.max(Number(searchParams.get('page')) || 1, 1),
-      search: searchParams.get('search') || '',
-      status: VALID_STATUSES.includes(searchParams.get('status')) ? searchParams.get('status') : 'all',
-      priority: VALID_PRIORITIES.includes(searchParams.get('priority')) ? searchParams.get('priority') : 'all',
-      sort: VALID_SORTS.includes(searchParams.get('sort')) ? searchParams.get('sort') : 'newest'
-    }
+    const nextQuery = getQueryFromSearchParams(searchParams)
 
     const queryIsDifferent =
       query.page !== nextQuery.page ||
@@ -47,6 +45,28 @@ function Dashboard() {
       updateQuery(nextQuery)
     }
   }, [searchParams, query.page, query.search, query.status, query.priority, query.sort, updateQuery])
+
+  useEffect(() => {
+    if (isLoading) {
+      return
+    }
+
+    const urlPage = Math.max(Number(searchParams.get('page')) || 1, 1)
+
+    if (pagination.page === urlPage) {
+      return
+    }
+
+    const params = new URLSearchParams(searchParams)
+
+    if (pagination.page > 1) {
+      params.set('page', String(pagination.page))
+    } else {
+      params.delete('page')
+    }
+
+    setSearchParams(params, { replace: true })
+  }, [isLoading, pagination.page, searchParams, setSearchParams])
 
   function updateTaskQuery(
     changes,
@@ -101,7 +121,10 @@ function Dashboard() {
     <section className='mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:py-14'>
       <div className='max-w-2xl'>
         <p className='text-sm font-semibold text-cyan-400'>Developer workspace</p>
-        <h1 className='mt-2 text-3xl font-bold tracking-tight sm:text-4xl'>Welcome back, {user?.name || 'Developer'}.</h1>
+        <h1 className='mt-2 text-3xl font-bold tracking-tight sm:text-4xl'>
+          Welcome back,{' '}
+          {user?.name || 'Developer'}.
+        </h1>
         <p className='mt-4 leading-7 text-slate-400'>Keep your development tasks organized and focused.</p>
       </div>
 
