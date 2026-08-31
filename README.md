@@ -1,28 +1,30 @@
 # DevBoard
 
-DevBoard is a compact full-stack MERN application built for learning and practicing modern React, Node.js, Express, and MongoDB development.
+DevBoard is a compact full-stack MERN application for managing personal development tasks.
 
-The project is intentionally kept small while introducing practical full-stack concepts such as authentication, user-owned data, REST APIs, custom hooks, React Context, optimistic UI updates, debounced search, pagination, and React performance optimization.
+The project is intentionally kept focused while demonstrating practical full-stack concepts including React, Node.js, Express, MongoDB, authentication, authorization, validation, REST APIs, custom hooks, optimistic UI updates, debounced search, pagination, and clean backend architecture.
 
 ## Tech Stack
 
 ### Frontend
 
-- React
-- Vite
-- React Router
-- Tailwind CSS
-- Axios
-- Lucide React
+* React
+* Vite
+* React Router
+* Tailwind CSS
+* Axios
+* Lucide React
 
 ### Backend
 
-- Node.js
-- Express.js
-- MongoDB
-- Mongoose
-- JWT
-- bcryptjs
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+* JWT
+* bcryptjs
+* cookie-parser
+* CORS
 
 ## Project Structure
 
@@ -33,6 +35,7 @@ devboard/
 │   │   ├── components/
 │   │   │   ├── Navbar.jsx
 │   │   │   ├── ProtectedRoute.jsx
+│   │   │   ├── TaskEditor.jsx
 │   │   │   ├── TaskForm.jsx
 │   │   │   └── TaskItem.jsx
 │   │   │
@@ -46,24 +49,36 @@ devboard/
 │   │   │   └── useTasks.js
 │   │   │
 │   │   ├── lib/
-│   │   │   └── api.js
+│   │   │   ├── api.js
+│   │   │   └── taskUtils.js
 │   │   │
 │   │   ├── pages/
 │   │   │   ├── Dashboard.jsx
 │   │   │   ├── Login.jsx
-│   │   │   └── Signup.jsx
+│   │   │   ├── Signup.jsx
+│   │   │   └── TaskDetails.jsx
 │   │   │
 │   │   ├── App.jsx
 │   │   ├── index.css
 │   │   └── main.jsx
 │   │
+│   ├── .env.example
 │   ├── package.json
 │   └── vite.config.js
 │
 ├── server/
 │   ├── src/
+│   │   ├── config/
+│   │   │   ├── database.js
+│   │   │   └── env.js
+│   │   │
+│   │   ├── controllers/
+│   │   │   ├── authController.js
+│   │   │   └── taskController.js
+│   │   │
 │   │   ├── middleware/
-│   │   │   └── auth.js
+│   │   │   ├── auth.js
+│   │   │   └── errorHandler.js
 │   │   │
 │   │   ├── models/
 │   │   │   ├── Task.js
@@ -73,7 +88,13 @@ devboard/
 │   │   │   ├── authRoutes.js
 │   │   │   └── taskRoutes.js
 │   │   │
-│   │   └── server.js
+│   │   ├── services/
+│   │   │   ├── authService.js
+│   │   │   └── taskService.js
+│   │   │
+│   │   └── validators/
+│   │       ├── authValidators.js
+│   │       └── taskValidators.js
 │   │
 │   ├── .env.example
 │   └── package.json
@@ -86,58 +107,113 @@ devboard/
 
 ### Authentication
 
-- User registration
-- User login
-- JWT authentication
-- Protected routes
-- Authenticated session validation
-- Logout
-- User-owned task data
+* User registration
+* User login
+* Cookie-based authentication
+* HttpOnly authentication cookie
+* Protected routes
+* Authenticated session validation
+* Logout with server-side cookie clearing
+* User-owned task data
+* Password hashing with bcryptjs
+* JWT-based authentication state inside the secure cookie
 
 ### Task Management
 
-- Create tasks
-- Edit tasks
-- Complete and uncomplete tasks
-- Delete tasks
-- Task priorities
-- Due dates
-- Search
-- Status filtering
-- Priority filtering
-- Sorting
-- Pagination
+* Create tasks
+* Edit tasks
+* Complete and uncomplete tasks
+* Delete tasks
+* Task priorities
+* Due dates
+* Search
+* Status filtering
+* Priority filtering
+* Sorting
+* Pagination
+* Task details page
 
 ### User Experience
 
-- Responsive layout
-- Mobile navigation
-- Loading states
-- Error states
-- Empty states
-- Optimistic updates
-- Request cancellation
-- Debounced search
+* Responsive layout
+* Mobile navigation
+* Loading states
+* Error states
+* Empty states
+* Optimistic task updates
+* Rollback after failed mutations
+* Request cancellation
+* Debounced search
+* URL-synchronized filters and pagination
+* Normalization of invalid pagination URLs
 
-## React Concepts
+## Authentication Architecture
 
-DevBoard is also used as a practical React learning project.
+DevBoard uses cookie-only browser authentication.
+
+The browser does not store the authentication token in `localStorage` and does not send an `Authorization: Bearer` header.
+
+The authentication flow is:
+
+```text
+Login / Signup
+      ↓
+Server validates credentials
+      ↓
+Server creates JWT
+      ↓
+Server sets HttpOnly cookie
+      ↓
+Browser stores cookie
+      ↓
+Browser automatically sends cookie
+      ↓
+Protected API verifies JWT
+```
+
+The authentication cookie is configured with:
+
+```text
+HttpOnly
+SameSite=Lax
+Secure in production
+```
+
+The frontend Axios client uses credentialed requests so the browser can send the authentication cookie.
+
+Logout is handled through:
+
+```text
+POST /api/auth/logout
+```
+
+which clears the authentication cookie on the server.
+
+The current authenticated user is restored through:
+
+```text
+GET /api/auth/me
+```
+
+after a browser refresh.
+
+## React Architecture
 
 ### Custom Hooks
 
-Task logic is separated into:
-
-```text
-useTasks
-```
-
-Authentication logic is separated into:
+Authentication logic is accessed through:
 
 ```text
 useAuth
 ```
 
-Debounced values are handled by:
+Task-list state and task mutations are handled through:
+
+```text
+useTasks
+```
+
+Debounced values are handled through:
 
 ```text
 useDebounce
@@ -145,49 +221,198 @@ useDebounce
 
 ### React Context
 
-Authentication state is shared through:
+Authentication state is provided through:
 
 ```text
 AuthProvider
 ```
 
-This allows components such as the navbar, login page, signup page, and protected routes to access the same authenticated user state.
+and consumed through:
 
-### `useCallback`
+```text
+useAuth
+```
 
-Used where stable function references are useful, particularly when callbacks are passed to memoized components or when callback identity needs to remain stable across renders.
+The context exposes:
 
-### `useMemo`
+```text
+user
+isAuthenticated
+isCheckingAuth
+login
+signup
+logout
+refreshUser
+```
 
-Used when derived data benefits from memoization rather than being recalculated unnecessarily.
+### Component Structure
 
-The project intentionally avoids using `useMemo` everywhere.
+Task editing is centralized in:
 
-### `React.memo`
+```text
+TaskEditor
+```
 
-`TaskItem` is memoized so unchanged task components can avoid unnecessary re-renders when their props remain unchanged.
+Task creation is handled by:
 
-### Optimistic Updates
+```text
+TaskForm
+```
 
-Task mutations update the UI immediately and synchronize with the backend afterward.
+Individual task rendering is handled by:
 
-If the request fails, the UI rolls back to its previous state.
+```text
+TaskItem
+```
 
-### Debounced Search
+Individual task details are displayed through:
 
-Search input remains responsive while backend requests are delayed until the user pauses typing.
+```text
+TaskDetails
+```
 
-### Request Cancellation
+## Optimistic Updates
 
-`AbortController` is used to prevent obsolete task-list requests from overwriting newer results.
+Task mutations update the interface immediately.
+
+The frontend synchronizes the operation with the backend and restores the previous state if the request fails.
+
+This behavior is used for:
+
+```text
+Create
+Update
+Complete / Uncomplete
+Delete
+```
+
+## Search and Request Cancellation
+
+Search uses a debounce interval so the API is not called for every keystroke.
+
+`AbortController` cancels obsolete task-list requests so an older request cannot overwrite newer results.
+
+## Pagination and URL Synchronization
+
+Dashboard filters and pagination are synchronized with the browser URL.
+
+Example:
+
+```text
+/dashboard?search=react&status=active&priority=high&sort=dueDate&page=2
+```
+
+Page `1` is treated as the default and does not need to appear in the URL.
+
+If the backend normalizes an invalid page to the last available page, the dashboard updates the browser URL to match the actual page.
+
+## Backend Architecture
+
+The backend follows a layered structure:
+
+```text
+Route
+  ↓
+Middleware
+  ↓
+Controller
+  ↓
+Service
+  ↓
+Model
+  ↓
+MongoDB
+```
+
+### Config
+
+`config/env.js`
+
+* Loads environment variables
+* Validates required environment variables
+* Exposes normalized application configuration
+
+`config/database.js`
+
+* Connects to MongoDB
+* Monitors MongoDB connection state
+* Closes the database connection during shutdown
+
+### Controllers
+
+Controllers handle HTTP concerns such as:
+
+```text
+request input
+validation results
+service calls
+status codes
+responses
+```
+
+### Services
+
+Services contain database and application logic for:
+
+```text
+authentication
+tasks
+```
+
+### Middleware
+
+Authentication middleware validates the JWT stored in the HttpOnly cookie.
+
+The global error middleware handles:
+
+```text
+Mongoose validation errors
+Mongoose cast errors
+duplicate-key errors
+application errors
+unexpected server errors
+```
+
+### Validators
+
+Validation logic is separated from controllers.
+
+Authentication validators handle:
+
+```text
+name
+email
+password
+```
+
+Task validators handle:
+
+```text
+task IDs
+task titles
+completion state
+priority
+due dates
+query parameters
+sorting
+filtering
+pagination
+```
 
 ## API Overview
+
+### Health
+
+```text
+GET /api/health
+```
 
 ### Authentication
 
 ```text
 POST /api/auth/signup
 POST /api/auth/login
+POST /api/auth/logout
 GET  /api/auth/me
 ```
 
@@ -195,6 +420,7 @@ GET  /api/auth/me
 
 ```text
 GET    /api/tasks
+GET    /api/tasks/:id
 POST   /api/tasks
 PATCH  /api/tasks/:id
 DELETE /api/tasks/:id
@@ -219,13 +445,39 @@ Example:
 
 ## Environment Variables
 
+### Frontend
+
+Create:
+
+```text
+client/.env
+```
+
+using:
+
+```text
+client/.env.example
+```
+
+Example:
+
+```env
+VITE_API_URL=http://localhost:4000/api
+```
+
+### Backend
+
 Create:
 
 ```text
 server/.env
 ```
 
-Use `server/.env.example` as the template.
+using:
+
+```text
+server/.env.example
+```
 
 Example:
 
@@ -233,10 +485,14 @@ Example:
 PORT=4000
 CLIENT_URL=http://localhost:5173
 MONGO_URI=
+MONGO_DB_NAME=devboard
 JWT_SECRET=
+NODE_ENV=development
 ```
 
-Never commit real environment variables or secrets to GitHub.
+The exact MongoDB connection string depends on whether MongoDB is running locally or through a hosted provider.
+
+Never commit real environment variables or secrets to Git.
 
 ## Installation
 
@@ -272,7 +528,7 @@ cd server
 npm run dev
 ```
 
-The backend runs at:
+The backend normally runs at:
 
 ```text
 http://localhost:4000
@@ -293,20 +549,18 @@ The frontend normally runs at:
 http://localhost:5173
 ```
 
-## Development Approach
+## Production Notes
 
-DevBoard is developed incrementally.
+For production deployment:
 
-Each meaningful change is:
-
-1. Implemented
-2. Tested
-3. Debugged
-4. Refactored when necessary
-5. Committed to Git
-6. Pushed to GitHub
-
-The goal is to keep the project compact while building features that demonstrate useful real-world concepts.
+* Use HTTPS.
+* Keep the authentication cookie `Secure`.
+* Use a strong, private `JWT_SECRET`.
+* Keep `MONGO_URI` and other secrets outside Git.
+* Configure `CLIENT_URL` to the exact frontend origin.
+* Keep credentialed CORS restricted to trusted origins.
+* Do not store authentication tokens in browser `localStorage`.
+* Do not expose the authentication cookie to JavaScript.
 
 ## Git Workflow
 
@@ -325,7 +579,7 @@ git add .
 Commit changes:
 
 ```bash
-git commit -m "feat: describe the change"
+git commit -m "describe the change"
 ```
 
 Push changes:
@@ -334,7 +588,7 @@ Push changes:
 git push origin main
 ```
 
-### Example Commit Messages
+Example commit messages:
 
 ```text
 feat: add task editing
@@ -343,40 +597,88 @@ feat: add authentication
 fix: validate task object ids
 fix: escape task search regex
 perf: debounce server task search
-refactor: extract task logic into custom hook
+refactor: extract task service
+refactor: improve server bootstrap and database configuration
 ```
+
+## Validation
+
+Frontend linting:
+
+```bash
+cd client
+npm run lint
+```
+
+Frontend production build:
+
+```bash
+npm run build
+```
+
+Backend development server:
+
+```bash
+cd server
+npm run dev
+```
+
+The backend package currently does not define an `npm run lint` script.
 
 ## Learning Goals
 
-The main purpose of DevBoard is to build a realistic MERN application without unnecessary complexity.
+DevBoard is intended to remain a focused MERN learning project.
 
-The project focuses on:
+The project demonstrates:
 
-- Modern React
-- React hooks
-- Custom hooks
-- React Context
-- Component design
-- `useCallback`
-- `useMemo`
-- `React.memo`
-- Optimistic UI
-- Debounced search
-- Request cancellation
-- REST API design
-- Express middleware
-- MongoDB and Mongoose
-- Authentication
-- Authorization
-- Validation
-- Error handling
-- Git and GitHub workflow
+* Modern React
+* React hooks
+* Custom hooks
+* React Context
+* Component design
+* `useCallback`
+* `useMemo`
+* `React.memo`
+* Optimistic UI
+* Debounced search
+* Request cancellation
+* URL state synchronization
+* REST API design
+* Express middleware
+* Layered backend architecture
+* MongoDB and Mongoose
+* JWT authentication
+* HttpOnly cookie authentication
+* Authorization
+* Validation
+* Error handling
+* Git and GitHub workflow
 
 ## Current Status
 
-The project foundation, authentication system, task management, server-side filtering, sorting, and pagination are implemented.
+The core DevBoard application is implemented and verified.
 
-The application is still being developed as a learning project, with additional improvements and experiments being added incrementally.
+The project includes:
+
+```text
+✅ Authentication
+✅ Cookie-only browser sessions
+✅ Task management
+✅ Task details
+✅ Search and filtering
+✅ Sorting
+✅ Pagination
+✅ URL synchronization
+✅ Optimistic updates
+✅ Backend validation
+✅ Layered backend structure
+✅ MongoDB connection management
+✅ Graceful server shutdown
+✅ Frontend lint
+✅ Production build
+```
+
+The project is intentionally kept focused and does not require additional user-facing features to demonstrate its core MERN concepts.
 
 ## License
 
