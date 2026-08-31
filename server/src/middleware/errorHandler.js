@@ -10,9 +10,7 @@ function errorHandler(error, req, res, next) {
     })
   }
 
-  if (
-    error instanceof mongoose.Error.CastError
-  ) {
+  if (error instanceof mongoose.Error.CastError) {
     return res.status(400).json({
       message: 'Invalid request data'
     })
@@ -21,6 +19,12 @@ function errorHandler(error, req, res, next) {
   if (error.code === 11000) {
     return res.status(409).json({
       message: 'A record with this value already exists'
+    })
+  }
+
+  if (error.statusCode) {
+    return res.status(error.statusCode).json({
+      message: error.message
     })
   }
 

@@ -1,23 +1,9 @@
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
-import User from '../models/User.js'
+import { authenticateUser, getUserById, registerUser } from '../services/authService.js'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function createToken(userId) {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' })
-}
-
 function isValidEmail(email) {
   return EMAIL_PATTERN.test(email)
-}
-
-function getPublicUser(user) {
-  return {
-    id: user._id,
-    name: user.name,
-    email: user.email
-  }
 }
 
 async function signup(req, res, next) {
@@ -58,28 +44,9 @@ async function signup(req, res, next) {
       })
     }
 
-    const existingUser = await User.findOne({ email })
+    const result = await registerUser({ name, email, password })
 
-    if (existingUser) {
-      return res.status(409).json({
-        message: 'An account with this email already exists'
-      })
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12)
-
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword
-    })
-
-    const token = createToken(user._id.toString())
-
-    res.status(201).json({
-      user: getPublicUser(user),
-      token
-    })
+    res.status(201).json(result)
   } catch (error) {
     next(error)
   }
@@ -103,28 +70,9 @@ async function login(req, res, next) {
       })
     }
 
-    const user = await User.findOne({ email }).select('+password')
+    const result = await authenticateUser({ email, password })
 
-    if (!user) {
-      return res.status(401).json({
-        message: 'Invalid email or password'
-      })
-    }
-
-    const passwordMatches = await bcrypt.compare(password, user.password)
-
-    if (!passwordMatches) {
-      return res.status(401).json({
-        message: 'Invalid email or password'
-      })
-    }
-
-    const token = createToken(user._id.toString())
-
-    res.json({
-      user: getPublicUser(user),
-      token
-    })
+    res.json(result)
   } catch (error) {
     next(error)
   }
@@ -132,7 +80,7 @@ async function login(req, res, next) {
 
 async function getCurrentUser(req, res, next) {
   try {
-    const user = await User.findById(req.userId).select('name email')
+    const user = await getUserById(req.userId)
 
     if (!user) {
       return res.status(404).json({
@@ -141,7 +89,11 @@ async function getCurrentUser(req, res, next) {
     }
 
     res.json({
-      user: getPublicUser(user)
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
     })
   } catch (error) {
     next(error)
