@@ -1,73 +1,16 @@
-import mongoose from 'mongoose'
 import { createTask as createTaskService, deleteTask as deleteTaskService, findTasks, getTaskById as getTaskByIdService, updateTask as updateTaskService } from '../services/taskService.js'
 
-const VALID_STATUSES = ['all', 'active', 'completed']
-
-const VALID_PRIORITIES = ['all', 'low', 'medium', 'high']
-
-const VALID_SORTS = ['newest', 'oldest', 'priority', 'dueDate']
-
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function isValidDate(value) {
-  if (value === null || value === undefined || value === '') {
-    return true
-  }
-
-  if (typeof value !== 'string') {
-    return false
-  }
-
-  const datePattern = /^\d{4}-\d{2}-\d{2}$/
-
-  if (!datePattern.test(value)) {
-    return false
-  }
-
-  const [year, month, day] = value.split('-').map(Number)
-
-  const date = new Date(Date.UTC(year, month - 1, day))
-
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-}
-
-function isValidObjectId(id) {
-  return mongoose.isValidObjectId(id)
-}
+import { escapeRegex, isValidObjectId, validateCompleted, validateDueDate, validateTaskPriority, validateTaskQuery, validateTaskTitle } from '../validators/taskValidators.js'
 
 async function getTasks(req, res, next) {
   try {
-    const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
+    const queryResult = validateTaskQuery(req.query)
 
-    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 10, 1), 50)
-
-    const search = req.query.search?.trim() || ''
-
-    const status = req.query.status || 'all'
-
-    const priority = req.query.priority || 'all'
-
-    const sort = req.query.sort || 'newest'
-
-    if (!VALID_STATUSES.includes(status)) {
-      return res.status(400).json({
-        message: 'Invalid status'
-      })
+    if (queryResult.error) {
+      return res.status(400).json(queryResult.error)
     }
 
-    if (!VALID_PRIORITIES.includes(priority)) {
-      return res.status(400).json({
-        message: 'Invalid priority'
-      })
-    }
-
-    if (!VALID_SORTS.includes(sort)) {
-      return res.status(400).json({
-        message: 'Invalid sort'
-      })
-    }
+    const { page, limit, search, status, priority, sort } = queryResult.value
 
     const result = await findTasks({
       userId: req.userId,
@@ -87,34 +30,30 @@ async function getTasks(req, res, next) {
 
 async function createTask(req, res, next) {
   try {
-    const title = typeof req.body.title === 'string' ? req.body.title.trim() : ''
+    const titleResult = validateTaskTitle(req.body.title)
+
+    if (titleResult.error) {
+      return res.status(400).json(titleResult.error)
+    }
 
     const priority = req.body.priority || 'medium'
 
-    const dueDate = req.body.dueDate || null
+    const priorityResult = validateTaskPriority(priority)
 
-    if (!title) {
-      return res.status(400).json({
-        message: 'Task title is required'
-      })
+    if (priorityResult.error) {
+      return res.status(400).json(priorityResult.error)
     }
 
-    if (!['low', 'medium', 'high'].includes(priority)) {
-      return res.status(400).json({
-        message: 'Invalid task priority'
-      })
-    }
+    const dueDateResult = validateDueDate(req.body.dueDate)
 
-    if (!isValidDate(dueDate)) {
-      return res.status(400).json({
-        message: 'Invalid due date'
-      })
+    if (dueDateResult.error) {
+      return res.status(400).json(dueDateResult.error)
     }
 
     const task = await createTaskService({
-      title,
-      priority,
-      dueDate,
+      title: titleResult.value,
+      priority: priorityResult.value,
+      dueDate: dueDateResult.value,
       userId: req.userId
     })
 
@@ -160,53 +99,43 @@ async function updateTask(req, res, next) {
     const updates = {}
 
     if (req.body.title !== undefined) {
-      if (typeof req.body.title !== 'string') {
-        return res.status(400).json({
-          message: 'Invalid task title'
-        })
+      const titleResult = validateTaskTitle(req.body.title)
+
+      if (titleResult.error) {
+        return res.status(400).json(titleResult.error)
       }
 
-      const title = req.body.title.trim()
-
-      if (!title) {
-        return res.status(400).json({
-          message: 'Task title cannot be empty'
-        })
-      }
-
-      updates.title = title
+      updates.title = titleResult.value
     }
 
     if (req.body.completed !== undefined) {
-      if (typeof req.body.completed !== 'boolean') {
-        return res.status(400).json({
-          message: 'Invalid completed value'
-        })
+      const completedResult = validateCompleted(req.body.completed)
+
+      if (completedResult.error) {
+        return res.status(400).json(completedResult.error)
       }
 
-      updates.completed = req.body.completed
+      updates.completed = completedResult.value
     }
 
     if (req.body.priority !== undefined) {
-      if (!['low', 'medium', 'high'].includes(req.body.priority)) {
-        return res.status(400).json({
-          message: 'Invalid task priority'
-        })
+      const priorityResult = validateTaskPriority(req.body.priority)
+
+      if (priorityResult.error) {
+        return res.status(400).json(priorityResult.error)
       }
 
-      updates.priority = req.body.priority
+      updates.priority = priorityResult.value
     }
 
     if (req.body.dueDate !== undefined) {
-      const dueDate = req.body.dueDate || null
+      const dueDateResult = validateDueDate(req.body.dueDate)
 
-      if (!isValidDate(dueDate)) {
-        return res.status(400).json({
-          message: 'Invalid due date'
-        })
+      if (dueDateResult.error) {
+        return res.status(400).json(dueDateResult.error)
       }
 
-      updates.dueDate = dueDate
+      updates.dueDate = dueDateResult.value
     }
 
     if (Object.keys(updates).length === 0) {
