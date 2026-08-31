@@ -3,12 +3,13 @@ import cors from 'cors'
 import taskRoutes from './routes/taskRoutes.js'
 import authRoutes from './routes/authRoutes.js'
 import errorHandler from './middleware/errorHandler.js'
+import env from './config/env.js'
 
 const app = express()
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL
+    origin: env.clientUrl
   })
 )
 
