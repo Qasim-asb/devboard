@@ -86,7 +86,7 @@ function TaskDetails() {
   }
 
   async function handleToggle() {
-    if (!task) {
+    if (!task || isSaving || isDeleting) {
       return
     }
 
@@ -111,7 +111,7 @@ function TaskDetails() {
   }
 
   async function handleDelete() {
-    if (!task || isDeleting) {
+    if (!task || isDeleting || isSaving) {
       return
     }
 
@@ -252,7 +252,7 @@ function TaskDetails() {
                 Dashboard
               </Link>
 
-              <button type='button' onClick={handleDelete} disabled={isDeleting} className='inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50'>
+              <button type='button' onClick={handleDelete} disabled={isDeleting || isSaving} className='inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50'>
                 <Trash2 size={16} />
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
