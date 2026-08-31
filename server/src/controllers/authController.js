@@ -1,50 +1,37 @@
 import { authenticateUser, getUserById, registerUser } from '../services/authService.js'
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-function isValidEmail(email) {
-  return EMAIL_PATTERN.test(email)
-}
+import { validateEmail, validateName, validatePassword } from '../validators/authValidators.js'
 
 async function signup(req, res, next) {
   try {
-    const name = typeof req.body.name === 'string' ? req.body.name.trim() : ''
-
-    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : ''
-
-    const password = typeof req.body.password === 'string' ? req.body.password : ''
-
-    if (!name || !email || !password) {
+    if (!req.body.name || !req.body.email || !req.body.password) {
       return res.status(400).json({
         message: 'Name, email, and password are required'
       })
     }
 
-    if (name.length < 2) {
-      return res.status(400).json({
-        message: 'Name must be at least 2 characters'
-      })
+    const nameResult = validateName(req.body.name)
+
+    if (nameResult.error) {
+      return res.status(400).json(nameResult.error)
     }
 
-    if (name.length > 50) {
-      return res.status(400).json({
-        message: 'Name must be at most 50 characters'
-      })
+    const emailResult = validateEmail(req.body.email)
+
+    if (emailResult.error) {
+      return res.status(400).json(emailResult.error)
     }
 
-    if (!isValidEmail(email)) {
-      return res.status(400).json({
-        message: 'Please provide a valid email'
-      })
+    const passwordResult = validatePassword(req.body.password)
+
+    if (passwordResult.error) {
+      return res.status(400).json(passwordResult.error)
     }
 
-    if (password.length < 8) {
-      return res.status(400).json({
-        message: 'Password must be at least 8 characters'
-      })
-    }
-
-    const result = await registerUser({ name, email, password })
+    const result = await registerUser({
+      name: nameResult.value,
+      email: emailResult.value,
+      password: passwordResult.value
+    })
 
     res.status(201).json(result)
   } catch (error) {
@@ -54,23 +41,28 @@ async function signup(req, res, next) {
 
 async function login(req, res, next) {
   try {
-    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : ''
-
-    const password = typeof req.body.password === 'string' ? req.body.password : ''
-
-    if (!email || !password) {
+    if (!req.body.email || !req.body.password) {
       return res.status(400).json({
         message: 'Email and password are required'
       })
     }
 
-    if (!isValidEmail(email)) {
-      return res.status(400).json({
-        message: 'Please provide a valid email'
-      })
+    const emailResult = validateEmail(req.body.email)
+
+    if (emailResult.error) {
+      return res.status(400).json(emailResult.error)
     }
 
-    const result = await authenticateUser({ email, password })
+    const passwordResult = validatePassword(req.body.password)
+
+    if (passwordResult.error) {
+      return res.status(400).json(passwordResult.error)
+    }
+
+    const result = await authenticateUser({
+      email: emailResult.value,
+      password: passwordResult.value
+    })
 
     res.json(result)
   } catch (error) {
