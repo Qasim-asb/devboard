@@ -1,25 +1,24 @@
 import jwt from 'jsonwebtoken'
+import env from '../config/env.js'
 
 function requireAuth(req, res, next) {
-  const authorization = req.headers.authorization
-
-  if (!authorization?.startsWith('Bearer ')) {
-    return res.status(401).json({
-      message: 'Authentication required',
-    })
-  }
-
-  const token = authorization.split(' ')[1]
-
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    const token = req.cookies?.[env.cookie.name]
 
-    req.userId = payload.userId
+    if (!token) {
+      return res.status(401).json({
+        message: 'Authentication required'
+      })
+    }
+
+    const decoded = jwt.verify(token, env.jwtSecret)
+
+    req.userId = decoded.userId
 
     next()
   } catch (error) {
     return res.status(401).json({
-      message: 'Invalid or expired token',
+      message: 'Invalid or expired authentication'
     })
   }
 }

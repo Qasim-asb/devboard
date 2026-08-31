@@ -8,17 +8,8 @@ if (!apiUrl) {
 
 const api = axios.create({
   baseURL: apiUrl,
+  withCredentials: true,
   timeout: 5000
-})
-
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('devboard-token')
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-
-  return config
 })
 
 export default api

@@ -15,7 +15,14 @@ const env = {
   jwtSecret: process.env.JWT_SECRET,
   clientUrl: process.env.CLIENT_URL,
   port: process.env.PORT || 4000,
-  mongoDbName: process.env.MONGO_DB_NAME
+  mongoDbName: process.env.MONGO_DB_NAME,
+  cookie: {
+    name: 'devboard-token',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  }
 }
 
 export default env

@@ -1,6 +1,18 @@
 import { authenticateUser, getUserById, registerUser } from '../services/authService.js'
 import { validateEmail, validateName, validatePassword } from '../validators/authValidators.js'
 
+import env from '../config/env.js'
+
+function setAuthCookie(res, token) {
+  res.cookie(env.cookie.name, token, {
+    httpOnly: env.cookie.httpOnly,
+    secure: env.cookie.secure,
+    sameSite: env.cookie.sameSite,
+    maxAge: env.cookie.maxAge,
+    path: '/api'
+  })
+}
+
 async function signup(req, res, next) {
   try {
     if (!req.body.name || !req.body.email || !req.body.password) {
@@ -33,7 +45,11 @@ async function signup(req, res, next) {
       password: passwordResult.value
     })
 
-    res.status(201).json(result)
+    setAuthCookie(res, result.token)
+
+    res.status(201).json({
+      user: result.user
+    })
   } catch (error) {
     next(error)
   }
@@ -64,7 +80,11 @@ async function login(req, res, next) {
       password: passwordResult.value
     })
 
-    res.json(result)
+    setAuthCookie(res, result.token)
+
+    res.json({
+      user: result.user
+    })
   } catch (error) {
     next(error)
   }
@@ -92,4 +112,21 @@ async function getCurrentUser(req, res, next) {
   }
 }
 
-export { getCurrentUser, login, signup }
+async function logout(req, res, next) {
+  try {
+    res.clearCookie(env.cookie.name, {
+      httpOnly: env.cookie.httpOnly,
+      secure: env.cookie.secure,
+      sameSite: env.cookie.sameSite,
+      path: '/api'
+    })
+
+    res.json({
+      message: 'Logged out successfully'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export { getCurrentUser, login, signup, logout }
