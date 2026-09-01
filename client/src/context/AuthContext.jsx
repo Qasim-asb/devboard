@@ -22,7 +22,12 @@ function AuthProvider({ children }) {
         return false
       }
 
-      setUser(null)
+      if (error.response?.status === 401) {
+        setUser(null)
+        return false
+      }
+
+      console.error('Unable to verify authentication:', error)
 
       return false
     }
