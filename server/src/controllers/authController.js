@@ -9,7 +9,7 @@ function setAuthCookie(res, token) {
     secure: env.cookie.secure,
     sameSite: env.cookie.sameSite,
     maxAge: env.cookie.maxAge,
-    path: '/api'
+    path: env.cookie.path
   })
 }
 
@@ -118,7 +118,7 @@ async function logout(req, res, next) {
       httpOnly: env.cookie.httpOnly,
       secure: env.cookie.secure,
       sameSite: env.cookie.sameSite,
-      path: '/api'
+      path: env.cookie.path
     })
 
     res.json({

@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-const requiredEnvVariables = ['MONGO_URI', 'JWT_SECRET', 'CLIENT_URL', 'MONGO_DB_NAME']
+const requiredEnvVariables = ['MONGO_URI', 'JWT_SECRET', 'CLIENT_URL', 'MONGO_DB_NAME', 'CSRF_SECRET']
 
 const missingEnvVariables = requiredEnvVariables.filter(name => !process.env[name])
 
@@ -16,12 +16,14 @@ const env = {
   clientUrl: process.env.CLIENT_URL,
   port: process.env.PORT || 4000,
   mongoDbName: process.env.MONGO_DB_NAME,
+  csrfSecret: process.env.CSRF_SECRET,
   cookie: {
     name: 'devboard-token',
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/api'
   }
 }
 
