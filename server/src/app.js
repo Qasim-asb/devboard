@@ -5,6 +5,7 @@ import taskRoutes from './routes/taskRoutes.js'
 import authRoutes from './routes/authRoutes.js'
 import errorHandler from './middleware/errorHandler.js'
 import env from './config/env.js'
+import verifyOrigin from './middleware/originCheck.js'
 
 const app = express()
 
@@ -17,6 +18,7 @@ app.use(
 
 app.use(express.json())
 app.use(cookieParser())
+app.use(verifyOrigin)
 
 app.get('/api/health', (req, res) => {
   res.json({
