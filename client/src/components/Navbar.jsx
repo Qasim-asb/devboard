@@ -12,8 +12,8 @@ function Navbar() {
     setIsOpen(false)
   }
 
-  function handleLogout() {
-    logout()
+  async function handleLogout() {
+    await logout()
     closeMenu()
     navigate('/login')
   }

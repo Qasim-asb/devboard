@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import useDebounce from './useDebounce'
-import api from '../lib/api'
+import { createTask, deleteTask as deleteTaskApi, fetchTaskList, updateTask as updateTaskApi } from '../lib/taskApi'
+import { getErrorMessage } from '../lib/taskUtils'
 
 const DEFAULT_LIMIT = 10
 
@@ -67,20 +68,68 @@ function createInitialState(initialQuery) {
     statistics: initialStatistics,
     pagination: initialPagination,
     query: {
-      page: initialQuery.page || 1,
+      page: initialQuery.page ?? 1,
       limit: DEFAULT_LIMIT,
-      search: initialQuery.search || '',
-      status: initialQuery.status || 'all',
-      priority: initialQuery.priority || 'all',
-      sort: initialQuery.sort || 'newest'
+      search: initialQuery.search ?? '',
+      status: initialQuery.status ?? 'all',
+      priority: initialQuery.priority ?? 'all',
+      sort: initialQuery.sort ?? 'newest'
     },
     isLoading: true,
     error: ''
   }
 }
 
-function getErrorMessage(error, fallback) {
-  return (error.response?.data?.message || fallback)
+function createRequestQuery(query, search) {
+  return {
+    page: query.page,
+    limit: query.limit,
+    search,
+    status: query.status,
+    priority: query.priority,
+    sort: query.sort
+  }
+}
+
+function updateTaskInList(tasks, id, updater) {
+  return tasks.map(task => task._id === id ? updater(task) : task)
+}
+
+function removeTaskFromList(tasks, id) {
+  return tasks.filter(task => task._id !== id)
+}
+
+function handleFetchError(error, signal, dispatch) {
+  if (error.code === 'ERR_CANCELED' || signal.aborted) {
+    return
+  }
+
+  console.error(error)
+
+  dispatch({
+    type: 'FETCH_ERROR',
+    payload: getErrorMessage(error, 'Unable to load tasks.')
+  })
+}
+
+function handleMutationError(error, fallback, dispatch) {
+  console.error(error)
+
+  dispatch({
+    type: 'FETCH_ERROR',
+    payload: getErrorMessage(error, fallback)
+  })
+}
+
+function handleTaskListSuccess(data, requestQuery, dispatch) {
+  dispatch({ type: 'FETCH_SUCCESS', payload: data })
+
+  if (data.pagination.page !== requestQuery.page) {
+    dispatch({
+      type: 'SET_QUERY',
+      payload: { page: data.pagination.page }
+    })
+  }
 }
 
 function useTasks(initialQuery = {}) {
@@ -91,21 +140,11 @@ function useTasks(initialQuery = {}) {
   const debouncedSearch = useDebounce(query.search, 300)
 
   const tasksRef = useRef(tasks)
-  const queryRef = useRef(query)
-  const debouncedSearchRef = useRef(debouncedSearch)
   const requestControllerRef = useRef(null)
 
   useEffect(() => {
     tasksRef.current = tasks
   }, [tasks])
-
-  useEffect(() => {
-    queryRef.current = query
-  }, [query])
-
-  useEffect(() => {
-    debouncedSearchRef.current = debouncedSearch
-  }, [debouncedSearch])
 
   useEffect(() => {
     requestControllerRef.current?.abort()
@@ -114,53 +153,21 @@ function useTasks(initialQuery = {}) {
 
     requestControllerRef.current = controller
 
-    const requestQuery = {
-      page: query.page,
-      limit: query.limit,
-      search: debouncedSearch,
-      status: query.status,
-      priority: query.priority,
-      sort: query.sort
-    }
+    const requestQuery = createRequestQuery(query, debouncedSearch)
 
     dispatch({ type: 'FETCH_START' })
 
     async function fetchTasks() {
       try {
-        const params = new URLSearchParams({
-          page: String(requestQuery.page),
-          limit: String(requestQuery.limit),
-          search: requestQuery.search,
-          status: requestQuery.status,
-          priority: requestQuery.priority,
-          sort: requestQuery.sort
-        })
-
-        const { data } = await api.get(`/tasks?${params.toString()}`, { signal: controller.signal })
+        const data = await fetchTaskList(requestQuery, controller.signal)
 
         if (controller.signal.aborted) {
           return
         }
 
-        dispatch({ type: 'FETCH_SUCCESS', payload: data })
-
-        if (data.pagination.page !== requestQuery.page) {
-          dispatch({
-            type: 'SET_QUERY',
-            payload: { page: data.pagination.page }
-          })
-        }
+        handleTaskListSuccess(data, requestQuery, dispatch)
       } catch (error) {
-        if (error.code === 'ERR_CANCELED' || controller.signal.aborted) {
-          return
-        }
-
-        console.error(error)
-
-        dispatch({
-          type: 'FETCH_ERROR',
-          payload: getErrorMessage(error, 'Unable to load tasks.')
-        })
+        handleFetchError(error, controller.signal, dispatch)
       }
     }
 
@@ -169,7 +176,7 @@ function useTasks(initialQuery = {}) {
     return () => {
       controller.abort()
     }
-  }, [query.page, query.limit, query.status, query.priority, query.sort, debouncedSearch])
+  }, [query, debouncedSearch])
 
   useEffect(() => {
     return () => {
@@ -186,58 +193,30 @@ function useTasks(initialQuery = {}) {
 
     dispatch({ type: 'FETCH_START' })
 
-    const currentQuery = queryRef.current
+    const currentQuery = query
 
-    const requestQuery = { ...currentQuery, search: debouncedSearchRef.current }
+    const requestQuery = createRequestQuery(currentQuery, debouncedSearch)
 
     try {
-      const params = new URLSearchParams({
-        page: String(requestQuery.page),
-        limit: String(requestQuery.limit),
-        search: requestQuery.search,
-        status: requestQuery.status,
-        priority: requestQuery.priority,
-        sort: requestQuery.sort
-      })
-
-      const { data } = await api.get(`/tasks?${params.toString()}`, { signal: controller.signal })
+      const data = await fetchTaskList(requestQuery, controller.signal)
 
       if (controller.signal.aborted) {
         return
       }
 
-      dispatch({ type: 'FETCH_SUCCESS', payload: data })
-
-      if (data.pagination.page !== requestQuery.page) {
-        dispatch({
-          type: 'SET_QUERY',
-          payload: { page: data.pagination.page }
-        })
-      }
+      handleTaskListSuccess(data, requestQuery, dispatch)
     } catch (error) {
-      if (error.code === 'ERR_CANCELED' || controller.signal.aborted) {
-        return
-      }
-
-      console.error(error)
-
-      dispatch({
-        type: 'FETCH_ERROR',
-        payload: getErrorMessage(error, 'Unable to load tasks.')
-      })
+      handleFetchError(error, controller.signal, dispatch)
     }
-  }, [])
+  }, [query, debouncedSearch])
 
   const updateQuery = useCallback(changes => {
     dispatch({ type: 'SET_QUERY', payload: changes })
   }, [])
 
   const changePage = useCallback(page => {
-    dispatch({
-      type: 'SET_QUERY',
-      payload: { page }
-    })
-  }, [])
+    updateQuery({ page })
+  }, [updateQuery])
 
   const addTask = useCallback(async (taskData) => {
     const title = taskData.title?.trim()
@@ -263,7 +242,7 @@ function useTasks(initialQuery = {}) {
     })
 
     try {
-      await api.post('/tasks', {
+      await createTask({
         title,
         priority: optimisticTask.priority,
         dueDate: optimisticTask.dueDate
@@ -273,17 +252,12 @@ function useTasks(initialQuery = {}) {
 
       return true
     } catch (error) {
-      console.error(error)
-
       dispatch({
         type: 'SET_TASKS',
         payload: tasksRef.current.filter(task => task._id !== temporaryId)
       })
 
-      dispatch({
-        type: 'FETCH_ERROR',
-        payload: getErrorMessage(error, 'Unable to create task.')
-      })
+      handleMutationError(error, 'Unable to create task.', dispatch)
 
       return false
     }
@@ -313,11 +287,11 @@ function useTasks(initialQuery = {}) {
 
     dispatch({
       type: 'SET_TASKS',
-      payload: tasksRef.current.map(task => task._id === id ? optimisticTask : task)
+      payload: updateTaskInList(tasksRef.current, id, () => optimisticTask)
     })
 
     try {
-      await api.patch(`/tasks/${id}`, {
+      await updateTaskApi(id, {
         title: optimisticTask.title,
         priority: optimisticTask.priority,
         dueDate: optimisticTask.dueDate
@@ -327,17 +301,12 @@ function useTasks(initialQuery = {}) {
 
       return true
     } catch (error) {
-      console.error(error)
-
       dispatch({
         type: 'SET_TASKS',
-        payload: tasksRef.current.map(task => task._id === id ? previousTask : task)
+        payload: updateTaskInList(tasksRef.current, id, () => previousTask)
       })
 
-      dispatch({
-        type: 'FETCH_ERROR',
-        payload: getErrorMessage(error, 'Unable to update task.')
-      })
+      handleMutationError(error, 'Unable to update task.', dispatch)
 
       return false
     }
@@ -355,27 +324,30 @@ function useTasks(initialQuery = {}) {
 
     dispatch({
       type: 'SET_TASKS',
-      payload: tasksRef.current.map(task => task._id === id ? { ...task, completed: nextCompleted } : task)
+      payload: updateTaskInList(
+        tasksRef.current,
+        id,
+        task => ({ ...task, completed: nextCompleted })
+      )
     })
 
     try {
-      await api.patch(`/tasks/${id}`, { completed: nextCompleted })
+      await updateTaskApi(id, { completed: nextCompleted })
 
       await refetchCurrentQuery()
 
       return true
     } catch (error) {
-      console.error(error)
-
       dispatch({
         type: 'SET_TASKS',
-        payload: tasksRef.current.map(task => task._id === id ? { ...task, completed: previousCompleted } : task)
+        payload: updateTaskInList(
+          tasksRef.current,
+          id,
+          task => ({ ...task, completed: previousCompleted })
+        )
       })
 
-      dispatch({
-        type: 'FETCH_ERROR',
-        payload: getErrorMessage(error, 'Unable to update task.')
-      })
+      handleMutationError(error, 'Unable to update task.', dispatch)
 
       return false
     }
@@ -390,18 +362,16 @@ function useTasks(initialQuery = {}) {
 
     dispatch({
       type: 'SET_TASKS',
-      payload: tasksRef.current.filter(task => task._id !== id)
+      payload: removeTaskFromList(tasksRef.current, id)
     })
 
     try {
-      await api.delete(`/tasks/${id}`)
+      await deleteTaskApi(id)
 
       await refetchCurrentQuery()
 
       return true
     } catch (error) {
-      console.error(error)
-
       const taskExists = tasksRef.current.some(task => task._id === id)
 
       if (!taskExists) {
@@ -411,10 +381,7 @@ function useTasks(initialQuery = {}) {
         })
       }
 
-      dispatch({
-        type: 'FETCH_ERROR',
-        payload: getErrorMessage(error, 'Unable to delete task.')
-      })
+      handleMutationError(error, 'Unable to delete task.', dispatch)
 
       return false
     }

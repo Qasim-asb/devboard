@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, Pencil, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import api from '../lib/api'
+import { deleteTask, getTask, updateTask } from '../lib/taskApi'
 import TaskEditor from '../components/TaskEditor'
-import { getDueDateLabel } from '../lib/taskUtils'
+import { getDueDateLabel, getErrorMessage } from '../lib/taskUtils'
 
 function TaskDetails() {
   const { id } = useParams()
@@ -24,7 +24,7 @@ function TaskDetails() {
         setIsLoading(true)
         setError('')
 
-        const { data } = await api.get(`/tasks/${id}`, { signal: controller.signal })
+        const data = await getTask(id, controller.signal)
 
         if (!controller.signal.aborted) {
           setTask(data)
@@ -36,7 +36,7 @@ function TaskDetails() {
 
         console.error(error)
 
-        setError(error.response?.data?.message || 'Unable to load task.')
+        setError(getErrorMessage(error, 'Unable to load task.'))
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false)
@@ -71,7 +71,7 @@ function TaskDetails() {
     setIsSaving(true)
 
     try {
-      const { data } = await api.patch(`/tasks/${id}`, updates)
+      const data = await updateTask(id, updates)
 
       setTask(data)
     } catch (error) {
@@ -79,7 +79,7 @@ function TaskDetails() {
 
       setTask(previousTask)
 
-      setError(error.response?.data?.message || 'Unable to update task.')
+      setError(getErrorMessage(error, 'Unable to update task.'))
     } finally {
       setIsSaving(false)
     }
@@ -98,7 +98,7 @@ function TaskDetails() {
     setTask(currentTask => ({ ...currentTask, completed: nextCompleted }))
 
     try {
-      const { data } = await api.patch(`/tasks/${id}`, { completed: nextCompleted })
+      const data = await updateTask(id, { completed: nextCompleted })
 
       setTask(data)
     } catch (error) {
@@ -106,7 +106,7 @@ function TaskDetails() {
 
       setTask(currentTask => ({ ...currentTask, completed: previousCompleted }))
 
-      setError(error.response?.data?.message || 'Unable to update task.')
+      setError(getErrorMessage(error, 'Unable to update task.'))
     }
   }
 
@@ -125,13 +125,13 @@ function TaskDetails() {
     setError('')
 
     try {
-      await api.delete(`/tasks/${id}`)
+      await deleteTask(id)
 
       navigate('/dashboard')
     } catch (error) {
       console.error(error)
 
-      setError(error.response?.data?.message || 'Unable to delete task.')
+      setError(getErrorMessage(error, 'Unable to delete task.'))
 
       setIsDeleting(false)
     }

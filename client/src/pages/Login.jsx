@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { LogIn } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
+import { getErrorMessage } from '../lib/taskUtils'
 
 function Login() {
   const navigate = useNavigate()
@@ -26,7 +27,7 @@ function Login() {
       await login(email, password)
       navigate('/')
     } catch (error) {
-      setError(error.response?.data?.message || 'Unable to login.')
+      setError(getErrorMessage(error, 'Unable to login.'))
     } finally {
       setIsSubmitting(false)
     }

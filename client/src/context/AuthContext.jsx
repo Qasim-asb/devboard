@@ -51,20 +51,22 @@ function AuthProvider({ children }) {
     }
   }, [refreshUser])
 
+  function setAuthenticatedUser(user) {
+    setUser(user)
+    setIsCheckingAuth(false)
+  }
+
   const login = useCallback(async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })
 
-    setUser(data.user)
-    setIsCheckingAuth(false)
+    setAuthenticatedUser(data.user)
   }, [])
 
-  const signup = useCallback(
-    async (name, email, password) => {
-      const { data } = await api.post('/auth/signup', { name, email, password })
+  const signup = useCallback(async (name, email, password) => {
+    const { data } = await api.post('/auth/signup', { name, email, password })
 
-      setUser(data.user)
-      setIsCheckingAuth(false)
-    }, [])
+    setAuthenticatedUser(data.user)
+  }, [])
 
   const logout = useCallback(async () => {
     try {

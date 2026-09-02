@@ -33,3 +33,7 @@ export function getDueDateLabel(dueDate) {
 
   return `Due ${due.toLocaleDateString()}`
 }
+
+export function getErrorMessage(error, fallback) {
+  return error.response?.data?.message || fallback
+}

@@ -1,13 +1,6 @@
 import { useState } from 'react'
 import { CheckCircle2, Save, X } from 'lucide-react'
-
-function getDateInputValue(dueDate) {
-  if (!dueDate) {
-    return ''
-  }
-
-  return new Date(dueDate).toISOString().slice(0, 10)
-}
+import { getDateInputValue } from '../lib/taskUtils'
 
 function TaskEditor({ task, onSave, onCancel, isSaving = false }) {
   const [title, setTitle] = useState(task.title)

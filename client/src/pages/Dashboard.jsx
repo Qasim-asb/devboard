@@ -22,6 +22,32 @@ function getQueryFromSearchParams(searchParams) {
   }
 }
 
+function createSearchParamsFromQuery(query) {
+  const params = new URLSearchParams()
+
+  if (query.search) {
+    params.set('search', query.search)
+  }
+
+  if (query.status !== 'all') {
+    params.set('status', query.status)
+  }
+
+  if (query.priority !== 'all') {
+    params.set('priority', query.priority)
+  }
+
+  if (query.sort !== 'newest') {
+    params.set('sort', query.sort)
+  }
+
+  if (query.page > 1) {
+    params.set('page', String(query.page))
+  }
+
+  return params
+}
+
 function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -68,35 +94,12 @@ function Dashboard() {
     setSearchParams(params, { replace: true })
   }, [isLoading, pagination.page, searchParams, setSearchParams])
 
-  function updateTaskQuery(
-    changes,
-    { replace = false } = {}
-  ) {
+  function updateTaskQuery(changes, { replace = false } = {}) {
     const nextQuery = { ...query, ...changes }
 
     updateQuery(changes)
 
-    const params = new URLSearchParams()
-
-    if (nextQuery.search) {
-      params.set('search', nextQuery.search)
-    }
-
-    if (nextQuery.status !== 'all') {
-      params.set('status', nextQuery.status)
-    }
-
-    if (nextQuery.priority !== 'all') {
-      params.set('priority', nextQuery.priority)
-    }
-
-    if (nextQuery.sort !== 'newest') {
-      params.set('sort', nextQuery.sort)
-    }
-
-    if (nextQuery.page > 1) {
-      params.set('page', String(nextQuery.page))
-    }
+    const params = createSearchParamsFromQuery(nextQuery)
 
     setSearchParams(params, { replace })
   }
