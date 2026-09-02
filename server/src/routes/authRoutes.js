@@ -15,8 +15,7 @@ router.get('/csrf-token', (req, res) => {
   const csrfToken = generateCsrfToken(req, res)
 
   res.json({ csrfToken })
-}
-)
+})
 
 router.get('/me', requireAuth, getCurrentUser)
 

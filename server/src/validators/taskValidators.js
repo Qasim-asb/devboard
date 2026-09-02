@@ -34,8 +34,12 @@ function isValidDate(value) {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
 }
 
-function isValidObjectId(id) {
-  return mongoose.isValidObjectId(id)
+function validateTaskId(id) {
+  if (!mongoose.isValidObjectId(id)) {
+    return { error: { message: 'Invalid task ID' } }
+  }
+
+  return { value: id }
 }
 
 function validateTaskQuery(query) {
@@ -108,4 +112,4 @@ function validateDueDate(value) {
   return { value: dueDate }
 }
 
-export { escapeRegex, isValidDate, isValidObjectId, validateCompleted, validateDueDate, validateTaskPriority, validateTaskQuery, validateTaskTitle }
+export { escapeRegex, isValidDate, validateCompleted, validateDueDate, validateTaskId, validateTaskPriority, validateTaskQuery, validateTaskTitle }

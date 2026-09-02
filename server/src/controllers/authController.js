@@ -15,25 +15,27 @@ function setAuthCookie(res, token) {
 
 async function signup(req, res, next) {
   try {
-    if (!req.body.name || !req.body.email || !req.body.password) {
+    const { name, email, password } = req.body
+
+    if (!name || !email || !password) {
       return res.status(400).json({
         message: 'Name, email, and password are required'
       })
     }
 
-    const nameResult = validateName(req.body.name)
+    const nameResult = validateName(name)
 
     if (nameResult.error) {
       return res.status(400).json(nameResult.error)
     }
 
-    const emailResult = validateEmail(req.body.email)
+    const emailResult = validateEmail(email)
 
     if (emailResult.error) {
       return res.status(400).json(emailResult.error)
     }
 
-    const passwordResult = validatePassword(req.body.password)
+    const passwordResult = validatePassword(password)
 
     if (passwordResult.error) {
       return res.status(400).json(passwordResult.error)
@@ -57,19 +59,21 @@ async function signup(req, res, next) {
 
 async function login(req, res, next) {
   try {
-    if (!req.body.email || !req.body.password) {
+    const { email, password } = req.body
+
+    if (!email || !password) {
       return res.status(400).json({
         message: 'Email and password are required'
       })
     }
 
-    const emailResult = validateEmail(req.body.email)
+    const emailResult = validateEmail(email)
 
     if (emailResult.error) {
       return res.status(400).json(emailResult.error)
     }
 
-    const passwordResult = validatePassword(req.body.password)
+    const passwordResult = validatePassword(password)
 
     if (passwordResult.error) {
       return res.status(400).json(passwordResult.error)

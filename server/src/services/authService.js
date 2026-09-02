@@ -15,6 +15,14 @@ function getPublicUser(user) {
   }
 }
 
+function createAuthenticationError() {
+  const error = new Error('Invalid email or password')
+
+  error.statusCode = 401
+
+  return error
+}
+
 async function registerUser({ name, email, password }) {
   const existingUser = await User.findOne({ email })
 
@@ -44,21 +52,13 @@ async function authenticateUser({ email, password }) {
   const user = await User.findOne({ email }).select('+password')
 
   if (!user) {
-    const error = new Error('Invalid email or password')
-
-    error.statusCode = 401
-
-    throw error
+    throw createAuthenticationError()
   }
 
   const passwordMatches = await bcrypt.compare(password, user.password)
 
   if (!passwordMatches) {
-    const error = new Error('Invalid email or password')
-
-    error.statusCode = 401
-
-    throw error
+    throw createAuthenticationError()
   }
 
   return {

@@ -1,6 +1,5 @@
 import { createTask as createTaskService, deleteTask as deleteTaskService, findTasks, getTaskById as getTaskByIdService, updateTask as updateTaskService } from '../services/taskService.js'
-
-import { escapeRegex, isValidObjectId, validateCompleted, validateDueDate, validateTaskPriority, validateTaskQuery, validateTaskTitle } from '../validators/taskValidators.js'
+import { escapeRegex, validateCompleted, validateDueDate, validateTaskId, validateTaskPriority, validateTaskQuery, validateTaskTitle } from '../validators/taskValidators.js'
 
 async function getTasks(req, res, next) {
   try {
@@ -65,14 +64,14 @@ async function createTask(req, res, next) {
 
 async function getTaskById(req, res, next) {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({
-        message: 'Invalid task ID'
-      })
+    const taskIdResult = validateTaskId(req.params.id)
+
+    if (taskIdResult.error) {
+      return res.status(400).json(taskIdResult.error)
     }
 
     const task = await getTaskByIdService({
-      taskId: req.params.id,
+      taskId: taskIdResult.value,
       userId: req.userId
     })
 
@@ -90,10 +89,10 @@ async function getTaskById(req, res, next) {
 
 async function updateTask(req, res, next) {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({
-        message: 'Invalid task ID'
-      })
+    const taskIdResult = validateTaskId(req.params.id)
+
+    if (taskIdResult.error) {
+      return res.status(400).json(taskIdResult.error)
     }
 
     const updates = {}
@@ -145,7 +144,7 @@ async function updateTask(req, res, next) {
     }
 
     const task = await updateTaskService({
-      taskId: req.params.id,
+      taskId: taskIdResult.value,
       userId: req.userId,
       updates
     })
@@ -164,14 +163,14 @@ async function updateTask(req, res, next) {
 
 async function deleteTask(req, res, next) {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({
-        message: 'Invalid task ID'
-      })
+    const taskIdResult = validateTaskId(req.params.id)
+
+    if (taskIdResult.error) {
+      return res.status(400).json(taskIdResult.error)
     }
 
     const task = await deleteTaskService({
-      taskId: req.params.id,
+      taskId: taskIdResult.value,
       userId: req.userId
     })
 
