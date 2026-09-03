@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import TaskDetails from './pages/TaskDetails'
+import PublicRoute from './components/PublicRoute'
 
 function App() {
   return (
@@ -28,8 +29,16 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path='/login' element={<Login />} />
-            <Route path='/signup' element={<Signup />} />
+            <Route path='/login' element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            } />
+
+            <Route path='/signup' element={
+              <PublicRoute>
+                <Signup />
+              </PublicRoute>} />
           </Routes>
         </main>
       </div>
