@@ -1,4 +1,4 @@
-import api from './api'
+import api from '../lib/api'
 
 export async function getTask(id, signal) {
   const { data } = await api.get(`/tasks/${id}`, { signal })

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import useDebounce from './useDebounce'
-import { createTask, deleteTask as deleteTaskApi, fetchTaskList, updateTask as updateTaskApi } from '../lib/taskApi'
+import { createTask, deleteTask as deleteTaskApi, fetchTaskList, updateTask as updateTaskApi } from '../services/taskService'
 import { getErrorMessage } from '../lib/taskUtils'
 
 const DEFAULT_LIMIT = 10

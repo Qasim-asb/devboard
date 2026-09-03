@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, Pencil, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { deleteTask, getTask, updateTask } from '../lib/taskApi'
+import { deleteTask, getTask, updateTask } from '../services/taskService'
 import TaskEditor from '../components/TaskEditor'
 import { getDueDateLabel, getErrorMessage } from '../lib/taskUtils'
 
