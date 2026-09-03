@@ -1,34 +1,47 @@
-# DevBoard
+DevBoard
 
 DevBoard is a compact full-stack MERN application for managing personal development tasks.
 
-The project is intentionally kept focused while demonstrating practical full-stack concepts including React, Node.js, Express, MongoDB, authentication, authorization, validation, REST APIs, custom hooks, optimistic UI updates, debounced search, pagination, and clean backend architecture.
+The project is intentionally focused while demonstrating practical full-stack concepts including React, Node.js, Express, MongoDB, authentication, authorization, validation, REST APIs, custom hooks, optimistic UI updates, debounced search, pagination, URL-synchronized state, and layered backend architecture.
 
-## Tech Stack
+Tech Stack
 
-### Frontend
+Frontend
 
-* React
-* Vite
-* React Router
-* Tailwind CSS
-* Axios
-* Lucide React
+React
 
-### Backend
+Vite
 
-* Node.js
-* Express.js
-* MongoDB
-* Mongoose
-* JWT
-* bcryptjs
-* cookie-parser
-* CORS
+React Router
 
-## Project Structure
+Tailwind CSS
 
-```text
+Axios
+
+Lucide React
+
+Backend
+
+Node.js
+
+Express.js
+
+MongoDB
+
+Mongoose
+
+JWT
+
+bcryptjs
+
+cookie-parser
+
+CORS
+
+csrf-csrf
+
+Project Structure
+
 devboard/
 ├── client/
 │   ├── src/
@@ -58,6 +71,9 @@ devboard/
 │   │   │   ├── Signup.jsx
 │   │   │   └── TaskDetails.jsx
 │   │   │
+│   │   ├── services/
+│   │   │   └── taskService.js
+│   │   │
 │   │   ├── App.jsx
 │   │   ├── index.css
 │   │   └── main.jsx
@@ -78,7 +94,9 @@ devboard/
 │   │   │
 │   │   ├── middleware/
 │   │   │   ├── auth.js
-│   │   │   └── errorHandler.js
+│   │   │   ├── csrf.js
+│   │   │   ├── errorHandler.js
+│   │   │   └── originCheck.js
 │   │   │
 │   │   ├── models/
 │   │   │   ├── Task.js
@@ -92,70 +110,161 @@ devboard/
 │   │   │   ├── authService.js
 │   │   │   └── taskService.js
 │   │   │
-│   │   └── validators/
-│   │       ├── authValidators.js
-│   │       └── taskValidators.js
+│   │   ├── validators/
+│   │   │   ├── authValidators.js
+│   │   │   └── taskValidators.js
+│   │   │
+│   │   ├── app.js
+│   │   └── server.js
 │   │
 │   ├── .env.example
 │   └── package.json
 │
 ├── .gitignore
 └── README.md
-```
 
-## Features
+Architecture
 
-### Authentication
+Frontend layers
 
-* User registration
-* User login
-* Cookie-based authentication
-* HttpOnly authentication cookie
-* Protected routes
-* Authenticated session validation
-* Logout with server-side cookie clearing
-* User-owned task data
-* Password hashing with bcryptjs
-* JWT-based authentication state inside the secure cookie
+The frontend uses a small, explicit separation of responsibilities:
 
-### Task Management
+Pages / Components
+        ↓
+      Hooks
+        ↓
+    Services
+        ↓
+       Lib
+        ↓
+    Backend API
 
-* Create tasks
-* Edit tasks
-* Complete and uncomplete tasks
-* Delete tasks
-* Task priorities
-* Due dates
-* Search
-* Status filtering
-* Priority filtering
-* Sorting
-* Pagination
-* Task details page
+components/ contains reusable UI components.
 
-### User Experience
+pages/ contains route-level screens.
 
-* Responsive layout
-* Mobile navigation
-* Loading states
-* Error states
-* Empty states
-* Optimistic task updates
-* Rollback after failed mutations
-* Request cancellation
-* Debounced search
-* URL-synchronized filters and pagination
-* Normalization of invalid pagination URLs
+hooks/ contains reusable React state and lifecycle logic.
 
-## Authentication Architecture
+context/ provides shared authentication state.
+
+services/ contains application/API operations such as task requests.
+
+lib/ contains lower-level reusable utilities and the configured Axios client.
+
+services/taskService.js is the task API layer. It provides the task operations used by useTasks and TaskDetails, while lib/api.js owns the shared Axios configuration, credentials, and CSRF-token handling.
+
+Backend layers
+
+The backend follows a layered structure:
+
+Route
+  ↓
+Middleware
+  ↓
+Controller
+  ↓
+Service
+  ↓
+Model
+  ↓
+MongoDB
+
+config/ manages environment and database configuration.
+
+routes/ defines HTTP endpoints and route middleware.
+
+middleware/ handles authentication, CSRF protection, origin validation, and centralized errors.
+
+controllers/ handle HTTP input, validation results, service calls, status codes, and responses.
+
+services/ contain database and application logic.
+
+models/ define Mongoose models.
+
+validators/ keep request validation separate from controllers.
+
+Features
+
+Authentication
+
+User registration
+
+User login
+
+Cookie-based authentication
+
+HttpOnly authentication cookie
+
+JWT-based authentication state inside the cookie
+
+Protected routes
+
+Authenticated session validation
+
+Logout with server-side cookie clearing
+
+User-owned task data
+
+Password hashing with bcryptjs
+
+Task Management
+
+Create tasks
+
+Edit tasks
+
+Complete and uncomplete tasks
+
+Delete tasks
+
+Task priorities
+
+Due dates
+
+Search
+
+Status filtering
+
+Priority filtering
+
+Sorting
+
+Pagination
+
+Task details page
+
+User Experience
+
+Responsive layout
+
+Mobile navigation
+
+Loading states
+
+Error states
+
+Empty states
+
+Optimistic task updates
+
+Rollback after failed mutations
+
+Request cancellation
+
+Debounced search
+
+URL-synchronized filters and pagination
+
+Normalization of invalid pagination URLs
+
+Security Architecture
 
 DevBoard uses cookie-only browser authentication.
 
-The browser does not store the authentication token in `localStorage` and does not send an `Authorization: Bearer` header.
+The browser does not store the authentication token in localStorage and does not send an Authorization: Bearer header.
 
 The authentication flow is:
 
-```text
 Login / Signup
       ↓
 Server validates credentials
@@ -169,73 +278,61 @@ Browser stores cookie
 Browser automatically sends cookie
       ↓
 Protected API verifies JWT
-```
 
 The authentication cookie is configured with:
 
-```text
 HttpOnly
 SameSite=Lax
 Secure in production
-```
 
 The frontend Axios client uses credentialed requests so the browser can send the authentication cookie.
 
-Logout is handled through:
+CSRF protection
 
-```text
-POST /api/auth/logout
-```
+State-changing requests use CSRF protection through csrf-csrf.
 
-which clears the authentication cookie on the server.
+The protected methods are applied to authentication and task mutations, while GET, HEAD, and OPTIONS are treated as safe methods.
 
-The current authenticated user is restored through:
+The frontend obtains the CSRF token from:
 
-```text
-GET /api/auth/me
-```
+GET /api/auth/csrf-token
 
-after a browser refresh.
+and sends it in the X-CSRF-Token request header for state-changing requests.
 
-## React Architecture
+Origin validation
 
-### Custom Hooks
+State-changing requests are also checked against the configured client origin. Requests without an origin header or with an unexpected origin are rejected.
 
-Authentication logic is accessed through:
+Credentialed CORS is restricted to the configured frontend origin.
 
-```text
+React Architecture
+
+Custom Hooks
+
+Authentication state and actions are accessed through:
+
 useAuth
-```
 
-Task-list state and task mutations are handled through:
+Task-list state, mutations, pagination, filtering, and request coordination are handled through:
 
-```text
 useTasks
-```
 
 Debounced values are handled through:
 
-```text
 useDebounce
-```
 
-### React Context
+React Context
 
 Authentication state is provided through:
 
-```text
 AuthProvider
-```
 
 and consumed through:
 
-```text
 useAuth
-```
 
 The context exposes:
 
-```text
 user
 isAuthenticated
 isCheckingAuth
@@ -243,35 +340,46 @@ login
 signup
 logout
 refreshUser
-```
 
-### Component Structure
+Component Structure
 
 Task editing is centralized in:
 
-```text
 TaskEditor
-```
 
 Task creation is handled by:
 
-```text
 TaskForm
-```
 
 Individual task rendering is handled by:
 
-```text
 TaskItem
-```
 
-Individual task details are displayed through:
+Task details are displayed through:
 
-```text
 TaskDetails
-```
 
-## Optimistic Updates
+Task Service Layer
+
+Task API communication is centralized in:
+
+client/src/services/taskService.js
+
+It provides:
+
+getTask()
+createTask()
+updateTask()
+deleteTask()
+fetchTaskList()
+
+This keeps HTTP endpoint details out of useTasks, TaskDetails, and the UI components.
+
+The lower-level Axios client remains in:
+
+client/src/lib/api.js
+
+Optimistic Updates
 
 Task mutations update the interface immediately.
 
@@ -279,318 +387,184 @@ The frontend synchronizes the operation with the backend and restores the previo
 
 This behavior is used for:
 
-```text
 Create
 Update
 Complete / Uncomplete
 Delete
-```
 
-## Search and Request Cancellation
+Search and Request Cancellation
 
 Search uses a debounce interval so the API is not called for every keystroke.
 
-`AbortController` cancels obsolete task-list requests so an older request cannot overwrite newer results.
+AbortController cancels obsolete task-list requests so an older request cannot overwrite newer results.
 
-## Pagination and URL Synchronization
+Pagination and URL Synchronization
 
 Dashboard filters and pagination are synchronized with the browser URL.
 
 Example:
 
-```text
 /dashboard?search=react&status=active&priority=high&sort=dueDate&page=2
-```
 
-Page `1` is treated as the default and does not need to appear in the URL.
+Page 1 is treated as the default and does not need to appear in the URL.
 
 If the backend normalizes an invalid page to the last available page, the dashboard updates the browser URL to match the actual page.
 
-## Backend Architecture
+API Overview
 
-The backend follows a layered structure:
+Health
 
-```text
-Route
-  ↓
-Middleware
-  ↓
-Controller
-  ↓
-Service
-  ↓
-Model
-  ↓
-MongoDB
-```
-
-### Config
-
-`config/env.js`
-
-* Loads environment variables
-* Validates required environment variables
-* Exposes normalized application configuration
-
-`config/database.js`
-
-* Connects to MongoDB
-* Monitors MongoDB connection state
-* Closes the database connection during shutdown
-
-### Controllers
-
-Controllers handle HTTP concerns such as:
-
-```text
-request input
-validation results
-service calls
-status codes
-responses
-```
-
-### Services
-
-Services contain database and application logic for:
-
-```text
-authentication
-tasks
-```
-
-### Middleware
-
-Authentication middleware validates the JWT stored in the HttpOnly cookie.
-
-The global error middleware handles:
-
-```text
-Mongoose validation errors
-Mongoose cast errors
-duplicate-key errors
-application errors
-unexpected server errors
-```
-
-### Validators
-
-Validation logic is separated from controllers.
-
-Authentication validators handle:
-
-```text
-name
-email
-password
-```
-
-Task validators handle:
-
-```text
-task IDs
-task titles
-completion state
-priority
-due dates
-query parameters
-sorting
-filtering
-pagination
-```
-
-## API Overview
-
-### Health
-
-```text
 GET /api/health
-```
 
-### Authentication
+Authentication
 
-```text
 POST /api/auth/signup
 POST /api/auth/login
 POST /api/auth/logout
+GET  /api/auth/csrf-token
 GET  /api/auth/me
-```
 
-### Tasks
+Tasks
 
-```text
 GET    /api/tasks
 GET    /api/tasks/:id
 POST   /api/tasks
 PATCH  /api/tasks/:id
 DELETE /api/tasks/:id
-```
 
 Task queries support:
 
-```text
 page
 limit
 search
 status
 priority
 sort
-```
 
 Example:
 
-```text
 /api/tasks?page=1&limit=10&search=react&status=active&priority=high&sort=dueDate
-```
 
-## Environment Variables
+Environment Variables
 
-### Frontend
+Frontend
 
 Create:
 
-```text
 client/.env
-```
 
 using:
 
-```text
 client/.env.example
-```
 
 Example:
 
-```env
 VITE_API_URL=http://localhost:4000/api
-```
 
-### Backend
+Backend
 
 Create:
 
-```text
 server/.env
-```
 
 using:
 
-```text
 server/.env.example
-```
 
 Example:
 
-```env
 PORT=4000
 CLIENT_URL=http://localhost:5173
 MONGO_URI=
 MONGO_DB_NAME=devboard
 JWT_SECRET=
 NODE_ENV=development
-```
 
 The exact MongoDB connection string depends on whether MongoDB is running locally or through a hosted provider.
 
 Never commit real environment variables or secrets to Git.
 
-## Installation
+Installation
 
 Clone the repository:
 
-```bash
 git clone <your-repository-url>
 cd devboard
-```
 
-### Frontend
+Frontend
 
-```bash
 cd client
 npm install
-```
 
-### Backend
+Backend
 
 Open another terminal:
 
-```bash
 cd server
 npm install
-```
 
-## Running the Application
+Running the Application
 
-### Start the Backend
+Start the Backend
 
-```bash
 cd server
 npm run dev
-```
 
 The backend normally runs at:
 
-```text
 http://localhost:4000
-```
 
-### Start the Frontend
+Start the Frontend
 
 Open another terminal:
 
-```bash
 cd client
 npm run dev
-```
 
 The frontend normally runs at:
 
-```text
 http://localhost:5173
-```
 
-## Production Notes
+Production Notes
 
 For production deployment:
 
-* Use HTTPS.
-* Keep the authentication cookie `Secure`.
-* Use a strong, private `JWT_SECRET`.
-* Keep `MONGO_URI` and other secrets outside Git.
-* Configure `CLIENT_URL` to the exact frontend origin.
-* Keep credentialed CORS restricted to trusted origins.
-* Do not store authentication tokens in browser `localStorage`.
-* Do not expose the authentication cookie to JavaScript.
+Use HTTPS.
 
-## Git Workflow
+Keep the authentication cookie Secure.
+
+Use a strong, private JWT_SECRET.
+
+Keep MONGO_URI and other secrets outside Git.
+
+Configure CLIENT_URL to the exact frontend origin.
+
+Keep credentialed CORS restricted to trusted origins.
+
+Do not store authentication tokens in browser localStorage.
+
+Do not expose the authentication cookie to JavaScript.
+
+Git Workflow
 
 Check the repository:
 
-```bash
 git status
-```
 
 Stage changes:
 
-```bash
 git add .
-```
 
 Commit changes:
 
-```bash
 git commit -m "describe the change"
-```
 
 Push changes:
 
-```bash
 git push origin main
-```
 
 Example commit messages:
 
-```text
 feat: add task editing
 feat: add task pagination
 feat: add authentication
@@ -598,71 +572,97 @@ fix: validate task object ids
 fix: escape task search regex
 perf: debounce server task search
 refactor: extract task service
-refactor: improve server bootstrap and database configuration
-```
+refactor: organize client services
 
-## Validation
+Validation
 
-Frontend linting:
+Frontend linting
 
-```bash
 cd client
 npm run lint
-```
 
-Frontend production build:
+Frontend production build
 
-```bash
+cd client
 npm run build
-```
 
-Backend development server:
+Backend syntax checks
 
-```bash
+The backend package currently does not define an npm run lint script. Individual server files can be checked with Node's syntax checker:
+
+node --check src/services/taskService.js
+
+Backend development server
+
 cd server
 npm run dev
-```
 
-The backend package currently does not define an `npm run lint` script.
+The server should connect to MongoDB and start on the configured port. The application also supports graceful shutdown of the HTTP server and MongoDB connection.
 
-## Learning Goals
+Learning Goals
 
 DevBoard is intended to remain a focused MERN learning project.
 
 The project demonstrates:
 
-* Modern React
-* React hooks
-* Custom hooks
-* React Context
-* Component design
-* `useCallback`
-* `useMemo`
-* `React.memo`
-* Optimistic UI
-* Debounced search
-* Request cancellation
-* URL state synchronization
-* REST API design
-* Express middleware
-* Layered backend architecture
-* MongoDB and Mongoose
-* JWT authentication
-* HttpOnly cookie authentication
-* Authorization
-* Validation
-* Error handling
-* Git and GitHub workflow
+Modern React
 
-## Current Status
+React hooks
 
-The core DevBoard application is implemented and verified.
+Custom hooks
 
-The project includes:
+React Context
 
-```text
+Component design
+
+useCallback
+
+useMemo
+
+React.memo
+
+Optimistic UI
+
+Debounced search
+
+Request cancellation
+
+URL state synchronization
+
+REST API design
+
+Express middleware
+
+Layered backend architecture
+
+MongoDB and Mongoose
+
+JWT authentication
+
+HttpOnly cookie authentication
+
+CSRF protection
+
+Origin validation
+
+Authorization
+
+Validation
+
+Error handling
+
+Git and GitHub workflow
+
+Client-side service-layer organization
+
+Current Status
+
+The core DevBoard application is implemented and the current refactored codebase has been verified with:
+
 ✅ Authentication
 ✅ Cookie-only browser sessions
+✅ CSRF protection
+✅ Origin validation
 ✅ Task management
 ✅ Task details
 ✅ Search and filtering
@@ -672,14 +672,15 @@ The project includes:
 ✅ Optimistic updates
 ✅ Backend validation
 ✅ Layered backend structure
+✅ Client service layer
 ✅ MongoDB connection management
 ✅ Graceful server shutdown
 ✅ Frontend lint
-✅ Production build
-```
+✅ Frontend production build
+✅ Backend startup verification
 
-The project is intentionally kept focused and does not require additional user-facing features to demonstrate its core MERN concepts.
+The project is intentionally kept focused so the core MERN concepts remain easy to study and understand.
 
-## License
+License
 
 This project is for learning and educational purposes.
